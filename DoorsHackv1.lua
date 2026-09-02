@@ -1,5 +1,7 @@
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 
+local ExecutorName = identifyexecutor and identifyexecutor() or "Unknown Executor"
+
 local function GetRequestFunction()
     if syn and syn.request then
         return syn.request
@@ -423,7 +425,7 @@ local function LoadMainUI(Library, SaveManager, ThemeManager)
 
         local Window = Library:CreateWindow({
             Title = "DoorsHack",
-            Footer = "version: 0.1",
+            Footer = "version: 0.1 | Executor: ".. ExecutorName,
             Resizable = true,
             Center = true,
             Icon = 11358524205,
