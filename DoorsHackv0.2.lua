@@ -1539,9 +1539,8 @@ MainGroup:AddToggle(
         local DisplayNames = {
             RushMoving = "Rush",
             BlitzMoving = "Blitz",
-            Blitz = "Blitz",
-            Lookman = "Lookman",
-            LookMan = "Lookman",
+            Blitz = "BackdoorRush",
+            BackdoorLookman = "Lookman",
             AmbushMoving = "Ambush",
             Eyes = "Eyes",
             Screech = "Screech",
@@ -1648,10 +1647,22 @@ MainGroup:AddToggle(
                 or Name == "Locker_Small_Locked"
         end
 
+        local function IsLighterObject(Object)
+            if not Object or Object.Name ~= "Lighter" then
+                return false
+            end
+
+            -- Add Lighter when it is a Tool or any non-MeshPart.
+            -- A MeshPart named Lighter is intentionally ignored.
+            return Object:IsA("Tool")
+                or not Object:IsA("MeshPart")
+        end
+
         local function IsItem(Object)
             local Name = Object.Name
 
             return Name == "GoldPile"
+                or Name == "TimerLever"
                 or Name == "KeyObtain"
                 or Name == "LiveHintBook"
                 or Name == "LeverForGate"
@@ -1664,7 +1675,7 @@ MainGroup:AddToggle(
                 or Name == "Lockpick"
                 or Name == "Candle"
                 or Name == "Vitamins"
-                or Name == "Lighter"
+                or IsLighterObject(Object)
                 or Name == "FuseObtain"
         end
 
