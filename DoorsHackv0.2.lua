@@ -1,3 +1,4 @@
+
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
 
 local ExecutorName = identifyexecutor and identifyexecutor() or "Unknown Executor"
@@ -523,102 +524,249 @@ local function LoadMainUI(
             )
 
         ----------------------------------------------------------------
--- OXYGEN DISPLAY
-----------------------------------------------------------------
+        -- OXYGEN DISPLAY
+        ----------------------------------------------------------------
 
-local OxygenLabel = Library:AddDraggableLabel("Oxygen : ??")
+        local OxygenLabel =
+            Library:AddDraggableLabel("Oxygen : ??")
 
-pcall(function()
-    OxygenLabel:SetVisible(false)
-end)
+        pcall(function()
+            OxygenLabel:SetVisible(false)
+        end)
 
-local OxygenDisplayEnabled = false
-local OxygenConnection
+        local OxygenDisplayEnabled = false
+        local OxygenConnection
 
-local function SetOxygenLabelVisible(Value)
-    pcall(function()
-        OxygenLabel:SetVisible(Value)
-    end)
-end
-
-local function SetOxygenText(Text)
-    pcall(function()
-        OxygenLabel:SetText(Text)
-    end)
-end
-
-local function UpdateOxygenDisplay()
-    if not OxygenDisplayEnabled then
-        return
-    end
-
-    local PlayerModel =
-        workspace:FindFirstChild(Player.Name)
-
-    if not PlayerModel then
-        SetOxygenText("Oxygen : ??")
-        return
-    end
-
-    local Oxygen =
-        PlayerModel:GetAttribute("Oxygen")
-
-    if Oxygen == nil then
-        SetOxygenText("Oxygen : ??")
-    else
-        SetOxygenText(
-            "Oxygen : " .. tostring(math.round(Oxygen))
-        )
-    end
-end
-
-local function SetOxygenDisplay(State)
-    OxygenDisplayEnabled = State
-
-    SetOxygenLabelVisible(State)
-
-    if State then
-        UpdateOxygenDisplay()
-    end
-end
-
-OxygenConnection =
-    RunService.Heartbeat:Connect(function()
-        if OxygenDisplayEnabled then
-            UpdateOxygenDisplay()
+        local function SetOxygenLabelVisible(Value)
+            pcall(function()
+                OxygenLabel:SetVisible(Value)
+            end)
         end
-    end)
 
-MainGroup:AddToggle(
-    "OxygenLevelShower",
-    {
-        Text = "Oxygen Level Shower",
-        Default = false,
+        local function SetOxygenText(Text)
+            pcall(function()
+                OxygenLabel:SetText(Text)
+            end)
+        end
 
-        Callback = function(Value)
-            SetOxygenDisplay(Value == true)
-        end,
-    }
-)
+        local function UpdateOxygenDisplay()
+            if not OxygenDisplayEnabled then
+                return
+            end
+
+            local PlayerModel =
+                workspace:FindFirstChild(Player.Name)
+
+            if not PlayerModel then
+                SetOxygenText("Oxygen : ??")
+                return
+            end
+
+            local Oxygen =
+                PlayerModel:GetAttribute("Oxygen")
+
+            if Oxygen == nil then
+                SetOxygenText("Oxygen : ??")
+            else
+                SetOxygenText(
+                    "Oxygen : "
+                    .. tostring(math.round(Oxygen))
+                )
+            end
+        end
+
+        local function SetOxygenDisplay(State)
+            OxygenDisplayEnabled = State
+
+            SetOxygenLabelVisible(State)
+
+            if State then
+                UpdateOxygenDisplay()
+            end
+        end
+
+        OxygenConnection =
+            RunService.Heartbeat:Connect(function()
+                if OxygenDisplayEnabled then
+                    UpdateOxygenDisplay()
+                end
+            end)
+
+        MainGroup:AddToggle(
+            "OxygenLevelShower",
+            {
+                Text = "Oxygen Level Shower",
+                Default = false,
+
+                Callback = function(Value)
+                    SetOxygenDisplay(Value == true)
+                end,
+            }
+        )
 
         ----------------------------------------------------------------
-        -- SPEED
+        -- SPEED / TP WALK
         ----------------------------------------------------------------
+
+        local SpeedEnabled = false
+        local TPWalkSpeed = 5
+        local AnchorLoopID = 0
+
+        local function StopAnchorLoop()
+            AnchorLoopID += 1
+
+            local Character = Player.Character
+            local Root =
+                Character
+                and Character:FindFirstChild(
+                    "HumanoidRootPart"
+                )
+
+            if Root then
+                Root.Anchored = false
+            end
+        end
+
+        local function StartAnchorLoop()
+            AnchorLoopID += 1
+
+            local ThisLoop = AnchorLoopID
+
+            task.spawn(function()
+                while SpeedEnabled
+                    and ThisLoop == AnchorLoopID do
+
+                    local Character =
+                        Player.Character
+
+                    local Root =
+                        Character
+                        and Character:FindFirstChild(
+                            "HumanoidRootPart"
+                        )
+
+                    if Root then
+                        Root.Anchored = true
+                    end
+
+                    task.wait(0.2)
+
+                    if not SpeedEnabled
+                        or ThisLoop ~= AnchorLoopID then
+                        break
+                    end
+
+                    Root =
+                        Player.Character
+                        and Player.Character:FindFirstChild(
+                            "HumanoidRootPart"
+                        )
+
+                    if Root then
+                        Root.Anchored = false
+                    end
+
+                    task.wait(0.2)
+                end
+
+                local Character =
+                    Player.Character
+
+                local Root =
+                    Character
+                    and Character:FindFirstChild(
+                        "HumanoidRootPart"
+                    )
+
+                if Root then
+                    Root.Anchored = false
+                end
+            end)
+        end
+
+        RunService.Heartbeat:Connect(function(Delta)
+            if not SpeedEnabled then
+                return
+            end
+
+            local Character =
+                Player.Character
+
+            local Humanoid =
+                Character
+                and Character:FindFirstChildOfClass(
+                    "Humanoid"
+                )
+
+            if not Character
+                or not Humanoid
+                or Humanoid.Health <= 0 then
+                return
+            end
+
+            local Direction =
+                Humanoid.MoveDirection
+
+            if Direction.Magnitude > 0 then
+                Character:TranslateBy(
+                    Direction
+                    * TPWalkSpeed
+                    * Delta
+                    * 10
+                )
+            end
+        end)
 
         _G.CurrentSpeed =
-            tonumber(_G.CurrentSpeed) or 16
+            tonumber(_G.CurrentSpeed) or 5
 
         if _G.CurrentSpeed < 1 then
-            _G.CurrentSpeed = 16
+            _G.CurrentSpeed = 5
         end
+
+        if _G.CurrentSpeed > 10 then
+            _G.CurrentSpeed = 10
+        end
+
+        TPWalkSpeed = _G.CurrentSpeed
+
+        local SpeedToggle =
+            MovementGroup:AddToggle(
+                "SpeedToggle",
+                {
+                    Text = "Speed",
+                    Default = false,
+
+                    Callback = function(Value)
+                        SpeedEnabled =
+                            Value == true
+
+                        if SpeedEnabled then
+                            StartAnchorLoop()
+                        else
+                            StopAnchorLoop()
+                        end
+                    end,
+                }
+            )
+
+        SpeedToggle:AddKeyPicker(
+            "SpeedKeybind",
+            {
+                Default = "Z",
+                Text = "Speed",
+                Mode = "Toggle",
+                SyncToggleState = true,
+            }
+        )
 
         MovementGroup:AddSlider(
             "SpeedSlider",
             {
-                Text = "Speed",
-                Default = 16,
+                Text = "Speed Scale",
+                Default = 5,
                 Min = 1,
-                Max = 200,
+                Max = 10,
                 Rounding = 0,
                 Suffix = " Speed",
 
@@ -627,60 +775,21 @@ MainGroup:AddToggle(
                         tonumber(Value)
 
                     if not NewSpeed then
-                        NewSpeed = 16
+                        NewSpeed = 5
                     end
 
                     if NewSpeed < 1 then
                         NewSpeed = 1
                     end
 
-                    if NewSpeed > 200 then
-                        NewSpeed = 200
+                    if NewSpeed > 10 then
+                        NewSpeed = 10
                     end
 
+                    TPWalkSpeed = NewSpeed
                     _G.CurrentSpeed = NewSpeed
                 end,
             }
-        )
-
-        local function ApplySpeed()
-            local Character =
-                Player.Character
-
-            if not Character then
-                return
-            end
-
-            local Humanoid =
-                Character:FindFirstChildOfClass(
-                    "Humanoid"
-                )
-
-            if not Humanoid
-                or Humanoid.Health <= 0 then
-                return
-            end
-
-            local Speed =
-                tonumber(_G.CurrentSpeed)
-
-            if not Speed or Speed < 1 then
-                Speed = 16
-                _G.CurrentSpeed = Speed
-            end
-
-            if Speed > 200 then
-                Speed = 200
-                _G.CurrentSpeed = Speed
-            end
-
-            if Humanoid.WalkSpeed ~= Speed then
-                Humanoid.WalkSpeed = Speed
-            end
-        end
-
-        RunService.Heartbeat:Connect(
-            ApplySpeed
         )
 
         ----------------------------------------------------------------
@@ -1233,306 +1342,6 @@ MainGroup:AddToggle(
         )
 
         ----------------------------------------------------------------
-        -- ANTI TELEPORT
-        ----------------------------------------------------------------
-
-        local AntiTPEnabled = false
-        local AntiTPConnection
-        local DiedConnection
-
-        local LastSafeCF
-        local LastSafePosition
-
-        local AntiTPDistance = 50
-        local AntiTPRestoring = false
-        local LastRestoreTime = 0
-
-        local AntiTPCooldown = 0.15
-
-        local function CleanupAntiTP()
-            if AntiTPConnection then
-                AntiTPConnection:Disconnect()
-                AntiTPConnection = nil
-            end
-
-            if DiedConnection then
-                DiedConnection:Disconnect()
-                DiedConnection = nil
-            end
-
-            LastSafeCF = nil
-            LastSafePosition = nil
-
-            AntiTPRestoring = false
-            LastRestoreTime = 0
-        end
-
-        local function GetAntiTPCharacter()
-            local Character =
-                Player.Character
-
-            if not Character then
-                return nil, nil, nil
-            end
-
-            local Humanoid =
-                Character:FindFirstChildOfClass(
-                    "Humanoid"
-                )
-
-            local Root =
-                Character:FindFirstChild(
-                    "HumanoidRootPart"
-                )
-
-            if not Humanoid or not Root then
-                return nil, nil, nil
-            end
-
-            if Humanoid.Health <= 0 then
-                return nil, nil, nil
-            end
-
-            return Character,
-                Humanoid,
-                Root
-        end
-
-        local function SaveSafePosition(Root)
-            if not Root or not Root.Parent then
-                return
-            end
-
-            LastSafeCF = Root.CFrame
-            LastSafePosition = Root.Position
-        end
-
-        local function RestoreSafePosition(
-            Character,
-            Humanoid,
-            Root
-        )
-            if AntiTPRestoring then
-                return
-            end
-
-            if not LastSafeCF
-                or not LastSafePosition then
-
-                SaveSafePosition(Root)
-                return
-            end
-
-            local Now = os.clock()
-
-            if Now - LastRestoreTime
-                < AntiTPCooldown then
-                return
-            end
-
-            AntiTPRestoring = true
-            LastRestoreTime = Now
-
-            pcall(function()
-                Root.AssemblyLinearVelocity =
-                    Vector3.zero
-
-                Root.AssemblyAngularVelocity =
-                    Vector3.zero
-
-                Character:PivotTo(
-                    LastSafeCF
-                )
-
-                Root.AssemblyLinearVelocity =
-                    Vector3.zero
-
-                Root.AssemblyAngularVelocity =
-                    Vector3.zero
-
-                if Humanoid then
-                    Humanoid:Move(
-                        Vector3.zero,
-                        false
-                    )
-                end
-            end)
-
-            task.defer(function()
-                local CurrentCharacter,
-                    CurrentHumanoid,
-                    CurrentRoot =
-                    GetAntiTPCharacter()
-
-                if CurrentCharacter
-                    and CurrentHumanoid
-                    and CurrentRoot then
-
-                    LastSafeCF =
-                        CurrentRoot.CFrame
-
-                    LastSafePosition =
-                        CurrentRoot.Position
-                end
-
-                AntiTPRestoring = false
-            end)
-        end
-
-        local function StartAntiTP()
-            CleanupAntiTP()
-
-            if not AntiTPEnabled then
-                return
-            end
-
-            local Character,
-                Humanoid,
-                Root =
-                GetAntiTPCharacter()
-
-            if not Character
-                or not Humanoid
-                or not Root then
-                return
-            end
-
-            SaveSafePosition(Root)
-
-            AntiTPConnection =
-                RunService.Heartbeat:Connect(
-                    function()
-                        if not AntiTPEnabled then
-                            return
-                        end
-
-                        if AntiTPRestoring then
-                            return
-                        end
-
-                        local CurrentCharacter,
-                            CurrentHumanoid,
-                            CurrentRoot =
-                            GetAntiTPCharacter()
-
-                        if not CurrentCharacter
-                            or not CurrentHumanoid
-                            or not CurrentRoot then
-                            return
-                        end
-
-                        if CurrentRoot ~= Root then
-                            Character =
-                                CurrentCharacter
-
-                            Humanoid =
-                                CurrentHumanoid
-
-                            Root =
-                                CurrentRoot
-
-                            SaveSafePosition(
-                                CurrentRoot
-                            )
-
-                            return
-                        end
-
-                        local CurrentPosition =
-                            CurrentRoot.Position
-
-                        if not LastSafePosition
-                            or not LastSafeCF then
-
-                            SaveSafePosition(
-                                CurrentRoot
-                            )
-
-                            return
-                        end
-
-                        local DistanceMoved =
-                            (
-                                CurrentPosition
-                                - LastSafePosition
-                            ).Magnitude
-
-                        if DistanceMoved
-                            > AntiTPDistance then
-
-                            RestoreSafePosition(
-                                CurrentCharacter,
-                                CurrentHumanoid,
-                                CurrentRoot
-                            )
-
-                            return
-                        end
-
-                        LastSafePosition =
-                            CurrentPosition
-
-                        LastSafeCF =
-                            CurrentRoot.CFrame
-                    end
-                )
-
-            DiedConnection =
-                Humanoid.Died:Connect(
-                    function()
-                        if AntiTPConnection then
-                            AntiTPConnection:Disconnect()
-                            AntiTPConnection = nil
-                        end
-
-                        if DiedConnection then
-                            DiedConnection:Disconnect()
-                            DiedConnection = nil
-                        end
-
-                        LastSafeCF = nil
-                        LastSafePosition = nil
-                        AntiTPRestoring = false
-                    end
-                )
-        end
-
-        MainGroup:AddToggle(
-            "AntiTeleport",
-            {
-                Text = "Anti Teleport",
-                Default = false,
-
-                Callback = function(Value)
-                    AntiTPEnabled = Value
-
-                    if Value then
-                        StartAntiTP()
-                    else
-                        CleanupAntiTP()
-                    end
-                end,
-            }
-        )
-
-        MainGroup:AddSlider(
-            "AntiTPDistance",
-            {
-                Text = "Anti TP Distance",
-                Default = 50,
-                Min = 10,
-                Max = 250,
-                Rounding = 0,
-                Suffix = " studs",
-
-                Callback = function(Value)
-                    AntiTPDistance =
-                        tonumber(Value) or 50
-                end,
-            }
-        )
-
-        ----------------------------------------------------------------
         -- ESP
         ----------------------------------------------------------------
 
@@ -1630,7 +1439,6 @@ MainGroup:AddToggle(
                 or Name == "HdingSpot18"
                 or Name == "HdingSpot19"
                 or Name == "HdingSpot20"
-                
         end
 
         local function IsStorageItem(Object)
@@ -1648,12 +1456,11 @@ MainGroup:AddToggle(
         end
 
         local function IsLighterObject(Object)
-            if not Object or Object.Name ~= "Lighter" then
+            if not Object
+                or Object.Name ~= "Lighter" then
                 return false
             end
 
-            -- Add Lighter when it is a Tool or any non-MeshPart.
-            -- A MeshPart named Lighter is intentionally ignored.
             return Object:IsA("Tool")
                 or not Object:IsA("MeshPart")
         end
@@ -1680,50 +1487,56 @@ MainGroup:AddToggle(
         end
 
         local function IsEyesInFih(Object)
-    if not Object or Object.Name ~= "Eyes" then
-        return false
-    end
-
-    local Current = Object.Parent
-
-    while Current do
-        local Name = Current.Name
-
-        if Name == "Fih"
-            or Name == "fih"
-            or Name == "Fih1"
-            or Name == "Fih2"
-            or Name == "Fih3" then
-            return true
-        end
-
-        Current = Current.Parent
-    end
-
-    for _, Descendant in ipairs(Object:GetDescendants()) do
-        local CurrentDescendant = Descendant
-
-        while CurrentDescendant do
-            local Name = CurrentDescendant.Name
-
-            if Name == "Fih"
-                or Name == "fih"
-                or Name == "Fih1"
-                or Name == "Fih2"
-                or Name == "Fih3" then
-                return true
+            if not Object
+                or Object.Name ~= "Eyes" then
+                return false
             end
 
-            if CurrentDescendant == Object then
-                break
+            local Current = Object.Parent
+
+            while Current do
+                local Name = Current.Name
+
+                if Name == "Fih"
+                    or Name == "fih"
+                    or Name == "Fih1"
+                    or Name == "Fih2"
+                    or Name == "Fih3" then
+                    return true
+                end
+
+                Current = Current.Parent
             end
 
-            CurrentDescendant = CurrentDescendant.Parent
-        end
-    end
+            for _, Descendant in ipairs(
+                Object:GetDescendants()
+            ) do
+                local CurrentDescendant =
+                    Descendant
 
-    return false
-end
+                while CurrentDescendant do
+                    local Name =
+                        CurrentDescendant.Name
+
+                    if Name == "Fih"
+                        or Name == "fih"
+                        or Name == "Fih1"
+                        or Name == "Fih2"
+                        or Name == "Fih3" then
+                        return true
+                    end
+
+                    if CurrentDescendant == Object then
+                        break
+                    end
+
+                    CurrentDescendant =
+                        CurrentDescendant.Parent
+                end
+            end
+
+            return false
+        end
 
         ----------------------------------------------------------------
         -- ESP IGNORE SYSTEM
@@ -1750,7 +1563,9 @@ end
             else
                 Bush =
                     Object:FindFirstAncestor("Bush")
-                    or Object:FindFirstAncestor("BushMoving")
+                    or Object:FindFirstAncestor(
+                        "BushMoving"
+                    )
             end
 
             if not Bush then
@@ -1788,14 +1603,10 @@ end
                 return true
             end
 
-            -- Ignore Bush/BushMoving when its
-            -- parent's parent is CurrentRooms.
             if IsBushInCurrentRooms(Object) then
                 return true
             end
 
-            -- Ignore EVERYTHING inside any
-            -- instance named "Parts".
             if IsInsideParts(Object) then
                 return true
             end
@@ -1817,7 +1628,9 @@ end
                 return false
             end
 
-            return DisplayNames[Object.Name] ~= nil
+            return DisplayNames[
+                Object.Name
+            ] ~= nil
         end
 
         local function IsDoor(Object)
@@ -1950,8 +1763,6 @@ end
                 return
             end
 
-            -- IMPORTANT:
-            -- Check this BEFORE creating any ESP.
             if IsIgnoredESPObject(Object) then
                 return
             end
@@ -2183,10 +1994,6 @@ end
                 for Object, Data in pairs(
                     ESPObjects
                 ) do
-
-                    -- REMOVE ESP if it has become
-                    -- part of an ignored Parts folder
-                    -- or an ignored Bush.
                     if not Object
                         or not Object.Parent
                         or IsIgnoredESPObject(Object)
@@ -2738,8 +2545,15 @@ end
                     _G.CurrentSpeed
                 ) < 1 then
 
-                _G.CurrentSpeed = 16
+                _G.CurrentSpeed = 5
             end
+
+            if tonumber(_G.CurrentSpeed) > 10 then
+                _G.CurrentSpeed = 10
+            end
+
+            TPWalkSpeed =
+                tonumber(_G.CurrentSpeed) or 5
 
             ConfigStatus:SetText(
                 "Config system ready"
@@ -2754,10 +2568,8 @@ end
             function(Character)
                 task.wait(1)
 
-                ApplySpeed()
-
-                if AntiTPEnabled then
-                    StartAntiTP()
+                if SpeedEnabled then
+                    StartAnchorLoop()
                 end
 
                 if NoclipEnabled then
@@ -2778,8 +2590,6 @@ end
 
         Player.CharacterRemoving:Connect(
             function()
-                CleanupAntiTP()
-
                 if PlayerLight then
                     PlayerLight:Destroy()
                     PlayerLight = nil
@@ -2787,36 +2597,36 @@ end
             end
         )
 
-----------------------------------------------------------------
--- UNLOAD
-----------------------------------------------------------------
+        ----------------------------------------------------------------
+        -- UNLOAD
+        ----------------------------------------------------------------
 
-Library:OnUnload(
-    function()
-        StopFly()
-        SetNoclip(false)
-        CleanupAntiTP()
-        ClearESP()
-        StopNotifier()
-        StopAutoKeyObtain()
+        Library:OnUnload(
+            function()
+                StopFly()
+                SetNoclip(false)
+                StopAnchorLoop()
+                ClearESP()
+                StopNotifier()
+                StopAutoKeyObtain()
 
-        if PlayerLight then
-            PlayerLight:Destroy()
-            PlayerLight = nil
-        end
+                if PlayerLight then
+                    PlayerLight:Destroy()
+                    PlayerLight = nil
+                end
 
-        if OxygenConnection then
-            OxygenConnection:Disconnect()
-            OxygenConnection = nil
-        end
+                if OxygenConnection then
+                    OxygenConnection:Disconnect()
+                    OxygenConnection = nil
+                end
 
-        if OxygenLabel then
-            OxygenLabel:SetVisible(false)
-        end
+                if OxygenLabel then
+                    OxygenLabel:SetVisible(false)
+                end
 
-        Library.Unloaded = true
-    end
-)
+                Library.Unloaded = true
+            end
+        )
 
         Notify(
             "DoorsHack",
