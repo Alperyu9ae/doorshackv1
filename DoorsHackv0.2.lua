@@ -1,4 +1,3 @@
-
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
 
 local ExecutorName = identifyexecutor and identifyexecutor() or "Unknown Executor"
@@ -163,6 +162,16 @@ local function AuthNotify(Title, Description)
             Description = tostring(Description),
             Time = 4,
         })
+
+        local AlertSound = Instance.new("Sound")
+        AlertSound.SoundId = "rbxassetid://17692186009"
+        AlertSound.Volume = 1
+        AlertSound.Parent = game:GetService("SoundService")
+        AlertSound:Play()
+
+        AlertSound.Ended:Connect(function()
+            AlertSound:Destroy()
+        end)
     end)
 end
 
