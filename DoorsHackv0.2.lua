@@ -1611,19 +1611,22 @@ local function LoadMainUI(
                 or Name == "HdingSpot20"
         end
 
-        local function IsStorageItem(Object)
-            local Name = Object.Name
+local function IsStorageItem(Object)
+    local Name = Object.Name
 
-            return Name == "Toolshed_Small"
-                or Name == "Dresser"
-                or Name == "ChestBox"
-                or Name == "ChestBoxLocked"
-                or Name == "Toolbox"
-                or Name == "Toolbox_Locked"
-                or Name == "Locker_Small"
-                or Name == "OldWoodenTable"
-                or Name == "Locker_Small_Locked"
-        end
+    if Name == "OldWoodenTable" then
+        return Object:FindFirstChild("DrawerContainer") ~= nil
+    end
+
+    return Name == "Toolshed_Small"
+        or Name == "Dresser"
+        or Name == "ChestBox"
+        or Name == "ChestBoxLocked"
+        or Name == "Toolbox"
+        or Name == "Toolbox_Locked"
+        or Name == "Locker_Small"
+        or Name == "Locker_Small_Locked"
+end
 
         local function IsLighterObject(Object)
             if not Object
