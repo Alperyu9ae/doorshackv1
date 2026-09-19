@@ -1546,6 +1546,7 @@ local function LoadMainUI(
             Eyes = "Eyes",
             Screech = "Screech",
             FigureRig = "Figure",
+            SurgeSpawn = "Surge"
             Mandrake = "Mandrake",
             Snare = "Snare",
             Dread = "Dread",
