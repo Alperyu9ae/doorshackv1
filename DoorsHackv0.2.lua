@@ -109,6 +109,22 @@ local function DownloadSource(URL)
     return nil
 end
 
+local ProximityPromptService = game:GetService("ProximityPromptService")
+
+local function SetPromptDuration(Prompt)
+    if Prompt and Prompt:IsA("ProximityPrompt") then
+        Prompt.HoldDuration = 0
+    end
+end
+
+for _, Object in ipairs(workspace:GetDescendants()) do
+    SetPromptDuration(Object)
+end
+
+workspace.DescendantAdded:Connect(function(Object)
+    SetPromptDuration(Object)
+end)
+
 local function LoadObsidian()
     local Source = DownloadSource(repo .. "Library.lua")
 
@@ -145,8 +161,23 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local Player = Players.LocalPlayer
+
+local function SetPromptDuration(Prompt)
+    if Prompt and Prompt:IsA("ProximityPrompt") then
+        Prompt.HoldDuration = 0
+    end
+end
+
+for _, Object in ipairs(workspace:GetDescendants()) do
+    SetPromptDuration(Object)
+end
+
+workspace.DescendantAdded:Connect(function(Object)
+    SetPromptDuration(Object)
+end)
 
 local KEY_SERVER = "https://doorschackkey.bonto.run"
 local KEY_VERIFY_URL = KEY_SERVER .. "/verify"
