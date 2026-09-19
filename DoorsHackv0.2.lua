@@ -1698,6 +1698,8 @@ local function LoadMainUI(
                     or Name == "fih"
                     or Name == "Fih1"
                     or Name == "Fih2"
+                    or Name == "Head"
+                    or Name == "Birchtree"
                     or Name == "Fih3" then
                     return true
                 end
