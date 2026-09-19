@@ -109,6 +109,8 @@ local function DownloadSource(URL)
     return nil
 end
 
+local rs = game:GetService("ReplicatedStorage")
+
 local ProximityPromptService =
     game:GetService("ProximityPromptService")
 
@@ -243,6 +245,7 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
 local Player = Players.LocalPlayer
+_G.Player = Player
 
 local KEY_SERVER = "https://doorschackkey.bonto.run"
 local KEY_VERIFY_URL = KEY_SERVER .. "/verify"
@@ -1546,7 +1549,7 @@ local function LoadMainUI(
             Eyes = "Eyes",
             Screech = "Screech",
             FigureRig = "Figure",
-            SurgeSpawn = "Surge"
+            SurgeSpawn = "Surge",
             Mandrake = "Mandrake",
             Snare = "Snare",
             Dread = "Dread",
@@ -2541,7 +2544,7 @@ local function LoadMainUI(
 
                                 Notify(
                                     Name
-                                        .. " is Gone!",
+                                        .. " Despawned!",
                                     ""
                                 )
 
@@ -2586,6 +2589,80 @@ local function LoadMainUI(
                 )()
             end
         })
+
+local RemotesFolder =
+    rs:FindFirstChild("RemotesFolder")
+
+local Event =
+    RemotesFolder
+    and RemotesFolder:FindFirstChild("Revive")
+
+if Event and Event:IsA("RemoteEvent") then
+    TrollGroup:AddButton({
+        Text = "Revive",
+
+        Func = function()
+            Event:FireServer()
+        end
+    })
+else
+    warn("DoorsHack: Failed to find the Revive RemoteEvent.")
+end
+
+local RemotesFolder =
+    rs:FindFirstChild("RemotesFolder")
+
+local Event =
+    RemotesFolder
+    and RemotesFolder:FindFirstChild("Lobby")
+
+if Event and Event:IsA("RemoteEvent") then
+    TrollGroup:AddButton({
+        Text = "Go to Lobby",
+
+        Func = function()
+            Event:FireServer()
+        end
+    })
+else
+    warn("DoorsHack: Failed to find the Lobby RemoteEvent.")
+end
+
+local RemotesFolder =
+    rs:FindFirstChild("RemotesFolder")
+
+local Event =
+    RemotesFolder
+    and RemotesFolder:FindFirstChild("PlayAgain")
+
+if Event and Event:IsA("RemoteEvent") then
+    TrollGroup:AddButton({
+        Text = "Play Again",
+
+        Func = function()
+            Event:FireServer()
+        end
+    })
+else
+    warn("DoorsHack: Failed to find the PlayAgain RemoteEvent.")
+end
+
+local Gold =
+    Player:WaitForChild("Gold", 10)
+
+_G.Gold = Gold
+
+if Gold and Gold:IsA("IntValue") then
+    TrollGroup:AddButton({
+        Text = "Get Infinite Gold",
+
+        Func = function()
+            Gold.Value = 999999999999999
+        end
+    })
+else
+    warn("DoorsHack: Failed to find the Gold IntValue.")
+end
 
         ----------------------------------------------------------------
         -- MENU
