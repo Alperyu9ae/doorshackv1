@@ -164,7 +164,7 @@ local function AuthNotify(Title, Description)
         })
 
         local AlertSound = Instance.new("Sound")
-        AlertSound.SoundId = "rbxassetid://17692186009"
+        AlertSound.SoundId = "rbxassetid://6026984224"
         AlertSound.Volume = 1
         AlertSound.Parent = game:GetService("SoundService")
         AlertSound:Play()
@@ -376,6 +376,16 @@ local function LoadMainUI(
                     Description = tostring(Description),
                     Time = 4,
                 })
+
+                local AlertSound = Instance.new("Sound")
+                AlertSound.SoundId = "rbxassetid://6026984224"
+                AlertSound.Volume = 1
+                AlertSound.Parent = game:GetService("SoundService")
+                AlertSound:Play()
+
+                AlertSound.Ended:Connect(function()
+                    AlertSound:Destroy()
+                end)
             end)
         end
 
@@ -531,6 +541,61 @@ local function LoadMainUI(
             Tabs["UI Settings"]:AddRightGroupbox(
                 "Configuration"
             )
+
+        ----------------------------------------------------------------
+        -- INSTANT UNLOCK PROMPTS
+        ----------------------------------------------------------------
+
+        local function SetUnlockPromptInstant(Prompt)
+            if not Prompt
+                or not Prompt:IsA("ProximityPrompt")
+                or Prompt.Name ~= "UnlockPrompt" then
+                return
+            end
+
+            local Door = Prompt:FindFirstAncestor("Door")
+
+            if not Door then
+                return
+            end
+
+            if Door:FindFirstChild("Lock") then
+                pcall(function()
+                    Prompt.HoldDuration = 0
+                end)
+            end
+        end
+
+        for _, Object in ipairs(workspace:GetDescendants()) do
+            if Object:IsA("ProximityPrompt")
+                and Object.Name == "UnlockPrompt" then
+                SetUnlockPromptInstant(Object)
+            end
+        end
+
+        workspace.DescendantAdded:Connect(function(Object)
+            if Object:IsA("ProximityPrompt")
+                and Object.Name == "UnlockPrompt" then
+                task.defer(function()
+                    SetUnlockPromptInstant(Object)
+                end)
+                return
+            end
+
+            if Object.Name == "Lock" then
+                local Door = Object:FindFirstAncestor("Door")
+
+                if Door then
+                    local Prompt = Door:FindFirstChild("UnlockPrompt", true)
+
+                    if Prompt and Prompt:IsA("ProximityPrompt") then
+                        pcall(function()
+                            Prompt.HoldDuration = 0
+                        end)
+                    end
+                end
+            end
+        end)
 
         ----------------------------------------------------------------
         -- OXYGEN DISPLAY
@@ -949,30 +1014,95 @@ local function LoadMainUI(
         -- FOV
         ----------------------------------------------------------------
 
-        local CurrentFOV = 70
+        local GlobalEnv =
+            getgenv and getgenv()
+            or _G
+
+        GlobalEnv.CurrentFOV =
+            tonumber(GlobalEnv.CurrentFOV)
+            or 70
+
+        if GlobalEnv.CurrentFOV < 0 then
+            GlobalEnv.CurrentFOV = 0
+        end
+
+        if GlobalEnv.CurrentFOV > 120 then
+            GlobalEnv.CurrentFOV = 120
+        end
+
+        local CurrentFOV =
+            GlobalEnv.CurrentFOV
+
+        local function SetGlobalFOV(Value)
+            local NewFOV =
+                tonumber(Value)
+
+            if not NewFOV then
+                NewFOV = 70
+            end
+
+            if NewFOV < 0 then
+                NewFOV = 0
+            end
+
+            if NewFOV > 120 then
+                NewFOV = 120
+            end
+
+            GlobalEnv.CurrentFOV = NewFOV
+            CurrentFOV = NewFOV
+        end
 
         local function ApplyFOV()
+            local GlobalFOV =
+                tonumber(GlobalEnv.CurrentFOV)
+
+            if not GlobalFOV then
+                GlobalFOV = CurrentFOV
+                GlobalEnv.CurrentFOV = GlobalFOV
+            end
+
+            if GlobalFOV < 0 then
+                GlobalFOV = 0
+                GlobalEnv.CurrentFOV = GlobalFOV
+            elseif GlobalFOV > 120 then
+                GlobalFOV = 120
+                GlobalEnv.CurrentFOV = GlobalFOV
+            end
+
+            CurrentFOV = GlobalFOV
+
             local Camera =
                 workspace.CurrentCamera
 
-            if Camera then
+            if Camera
+                and Camera.FieldOfView ~= GlobalFOV then
+
                 Camera.FieldOfView =
-                    CurrentFOV
+                    GlobalFOV
             end
         end
+
+        RunService:BindToRenderStep(
+            "DoorsHackGlobalFOV",
+            Enum.RenderPriority.Camera.Value + 1,
+            function()
+                ApplyFOV()
+            end
+        )
 
         MovementGroup:AddSlider(
             "FOVSlider",
             {
                 Text = "Player FOV",
-                Default = 70,
+                Default = CurrentFOV,
                 Min = 0,
                 Max = 120,
                 Rounding = 0,
                 Suffix = "°",
 
                 Callback = function(Value)
-                    CurrentFOV = Value
+                    SetGlobalFOV(Value)
                     ApplyFOV()
                 end,
             }
