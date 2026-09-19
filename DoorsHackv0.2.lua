@@ -109,21 +109,101 @@ local function DownloadSource(URL)
     return nil
 end
 
-local ProximityPromptService = game:GetService("ProximityPromptService")
+local ProximityPromptService =
+    game:GetService("ProximityPromptService")
 
-local function SetPromptDuration(Prompt)
-    if Prompt and Prompt:IsA("ProximityPrompt") then
-        Prompt.HoldDuration = 0
+local PromptConnections = {}
+
+local function ForcePromptInstant(Prompt)
+    if not Prompt
+        or not Prompt:IsA("ProximityPrompt") then
+        return
+    end
+
+    pcall(function()
+        if Prompt.HoldDuration ~= 0 then
+            Prompt.HoldDuration = 0
+        end
+    end)
+end
+
+local function SetupPrompt(Prompt)
+    if not Prompt
+        or not Prompt:IsA("ProximityPrompt") then
+        return
+    end
+
+    ForcePromptInstant(Prompt)
+
+    if PromptConnections[Prompt] then
+        PromptConnections[Prompt]:Disconnect()
+        PromptConnections[Prompt] = nil
+    end
+
+    local Success, Connection = pcall(function()
+        return Prompt:GetPropertyChangedSignal(
+            "HoldDuration"
+        ):Connect(function()
+            if Prompt.Parent then
+                ForcePromptInstant(Prompt)
+            end
+        end)
+    end)
+
+    if Success then
+        PromptConnections[Prompt] = Connection
     end
 end
 
-for _, Object in ipairs(workspace:GetDescendants()) do
-    SetPromptDuration(Object)
+local function RemovePrompt(Prompt)
+    local Connection =
+        PromptConnections[Prompt]
+
+    if Connection then
+        Connection:Disconnect()
+        PromptConnections[Prompt] = nil
+    end
 end
 
-workspace.DescendantAdded:Connect(function(Object)
-    SetPromptDuration(Object)
-end)
+for _, Object in ipairs(
+    workspace:GetDescendants()
+) do
+    if Object:IsA("ProximityPrompt") then
+        SetupPrompt(Object)
+    end
+end
+
+workspace.DescendantAdded:Connect(
+    function(Object)
+        if Object:IsA("ProximityPrompt") then
+            task.defer(function()
+                if Object.Parent then
+                    SetupPrompt(Object)
+                end
+            end)
+        end
+    end
+)
+
+workspace.DescendantRemoving:Connect(
+    function(Object)
+        if Object:IsA("ProximityPrompt") then
+            RemovePrompt(Object)
+        end
+    end
+)
+
+ProximityPromptService.PromptShown:Connect(
+    function(Prompt)
+        ForcePromptInstant(Prompt)
+
+        task.defer(function()
+            if Prompt and Prompt.Parent then
+                ForcePromptInstant(Prompt)
+            end
+        end)
+    end
+)
 
 local function LoadObsidian()
     local Source = DownloadSource(repo .. "Library.lua")
@@ -161,23 +241,8 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local Player = Players.LocalPlayer
-
-local function SetPromptDuration(Prompt)
-    if Prompt and Prompt:IsA("ProximityPrompt") then
-        Prompt.HoldDuration = 0
-    end
-end
-
-for _, Object in ipairs(workspace:GetDescendants()) do
-    SetPromptDuration(Object)
-end
-
-workspace.DescendantAdded:Connect(function(Object)
-    SetPromptDuration(Object)
-end)
 
 local KEY_SERVER = "https://doorschackkey.bonto.run"
 local KEY_VERIFY_URL = KEY_SERVER .. "/verify"
@@ -577,56 +642,13 @@ local function LoadMainUI(
         -- INSTANT UNLOCK PROMPTS
         ----------------------------------------------------------------
 
-        local function SetUnlockPromptInstant(Prompt)
-            if not Prompt
-                or not Prompt:IsA("ProximityPrompt")
-                or Prompt.Name ~= "UnlockPrompt" then
-                return
-            end
-
-            local Door = Prompt:FindFirstAncestor("Door")
-
-            if not Door then
-                return
-            end
-
-            if Door:FindFirstChild("Lock") then
-                pcall(function()
-                    Prompt.HoldDuration = 0
-                end)
+        for _, Object in ipairs(
+            workspace:GetDescendants()
+        ) do
+            if Object:IsA("ProximityPrompt") then
+                ForcePromptInstant(Object)
             end
         end
-
-        for _, Object in ipairs(workspace:GetDescendants()) do
-            if Object:IsA("ProximityPrompt")
-                and Object.Name == "UnlockPrompt" then
-                SetUnlockPromptInstant(Object)
-            end
-        end
-
-        workspace.DescendantAdded:Connect(function(Object)
-            if Object:IsA("ProximityPrompt")
-                and Object.Name == "UnlockPrompt" then
-                task.defer(function()
-                    SetUnlockPromptInstant(Object)
-                end)
-                return
-            end
-
-            if Object.Name == "Lock" then
-                local Door = Object:FindFirstAncestor("Door")
-
-                if Door then
-                    local Prompt = Door:FindFirstChild("UnlockPrompt", true)
-
-                    if Prompt and Prompt:IsA("ProximityPrompt") then
-                        pcall(function()
-                            Prompt.HoldDuration = 0
-                        end)
-                    end
-                end
-            end
-        end)
 
         ----------------------------------------------------------------
         -- OXYGEN DISPLAY
@@ -1611,22 +1633,24 @@ local function LoadMainUI(
                 or Name == "HdingSpot20"
         end
 
-local function IsStorageItem(Object)
-    local Name = Object.Name
+        local function IsStorageItem(Object)
+            local Name = Object.Name
 
-    if Name == "OldWoodenTable" then
-        return Object:FindFirstChild("DrawerContainer") ~= nil
-    end
+            if Name == "OldWoodenTable" then
+                return Object:FindFirstChild(
+                    "DrawerContainer"
+                ) ~= nil
+            end
 
-    return Name == "Toolshed_Small"
-        or Name == "Dresser"
-        or Name == "ChestBox"
-        or Name == "ChestBoxLocked"
-        or Name == "Toolbox"
-        or Name == "Toolbox_Locked"
-        or Name == "Locker_Small"
-        or Name == "Locker_Small_Locked"
-end
+            return Name == "Toolshed_Small"
+                or Name == "Dresser"
+                or Name == "ChestBox"
+                or Name == "ChestBoxLocked"
+                or Name == "Toolbox"
+                or Name == "Toolbox_Locked"
+                or Name == "Locker_Small"
+                or Name == "Locker_Small_Locked"
+        end
 
         local function IsLighterObject(Object)
             if not Object
