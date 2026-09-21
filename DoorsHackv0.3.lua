@@ -110,15 +110,11 @@ local function DownloadSource(URL)
 end
 
 local rs = game:GetService("ReplicatedStorage")
-
-local ProximityPromptService =
-    game:GetService("ProximityPromptService")
-
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local PromptConnections = {}
 
 local function ForcePromptInstant(Prompt)
-    if not Prompt
-        or not Prompt:IsA("ProximityPrompt") then
+    if not Prompt or not Prompt:IsA("ProximityPrompt") then
         return
     end
 
@@ -130,8 +126,7 @@ local function ForcePromptInstant(Prompt)
 end
 
 local function SetupPrompt(Prompt)
-    if not Prompt
-        or not Prompt:IsA("ProximityPrompt") then
+    if not Prompt or not Prompt:IsA("ProximityPrompt") then
         return
     end
 
@@ -143,9 +138,7 @@ local function SetupPrompt(Prompt)
     end
 
     local Success, Connection = pcall(function()
-        return Prompt:GetPropertyChangedSignal(
-            "HoldDuration"
-        ):Connect(function()
+        return Prompt:GetPropertyChangedSignal("HoldDuration"):Connect(function()
             if Prompt.Parent then
                 ForcePromptInstant(Prompt)
             end
@@ -158,8 +151,7 @@ local function SetupPrompt(Prompt)
 end
 
 local function RemovePrompt(Prompt)
-    local Connection =
-        PromptConnections[Prompt]
+    local Connection = PromptConnections[Prompt]
 
     if Connection then
         Connection:Disconnect()
@@ -167,45 +159,37 @@ local function RemovePrompt(Prompt)
     end
 end
 
-for _, Object in ipairs(
-    workspace:GetDescendants()
-) do
+for _, Object in ipairs(workspace:GetDescendants()) do
     if Object:IsA("ProximityPrompt") then
         SetupPrompt(Object)
     end
 end
 
-workspace.DescendantAdded:Connect(
-    function(Object)
-        if Object:IsA("ProximityPrompt") then
-            task.defer(function()
-                if Object.Parent then
-                    SetupPrompt(Object)
-                end
-            end)
-        end
-    end
-)
-
-workspace.DescendantRemoving:Connect(
-    function(Object)
-        if Object:IsA("ProximityPrompt") then
-            RemovePrompt(Object)
-        end
-    end
-)
-
-ProximityPromptService.PromptShown:Connect(
-    function(Prompt)
-        ForcePromptInstant(Prompt)
-
+workspace.DescendantAdded:Connect(function(Object)
+    if Object:IsA("ProximityPrompt") then
         task.defer(function()
-            if Prompt and Prompt.Parent then
-                ForcePromptInstant(Prompt)
+            if Object.Parent then
+                SetupPrompt(Object)
             end
         end)
     end
-)
+end)
+
+workspace.DescendantRemoving:Connect(function(Object)
+    if Object:IsA("ProximityPrompt") then
+        RemovePrompt(Object)
+    end
+end)
+
+ProximityPromptService.PromptShown:Connect(function(Prompt)
+    ForcePromptInstant(Prompt)
+
+    task.defer(function()
+        if Prompt and Prompt.Parent then
+            ForcePromptInstant(Prompt)
+        end
+    end)
+end)
 
 local function LoadObsidian()
     local Source = DownloadSource(repo .. "Library.lua")
@@ -217,17 +201,13 @@ local function LoadObsidian()
     local Loader, CompileError = loadstring(Source)
 
     if type(Loader) ~= "function" then
-        return nil,
-            "Could not compile Obsidian Library.lua: "
-            .. tostring(CompileError)
+        return nil, "Could not compile Obsidian Library.lua: " .. tostring(CompileError)
     end
 
     local Success, Library = pcall(Loader)
 
     if not Success then
-        return nil,
-            "Could not initialize Obsidian Library.lua: "
-            .. tostring(Library)
+        return nil, "Could not initialize Obsidian Library.lua: " .. tostring(Library)
     end
 
     return Library
@@ -397,9 +377,7 @@ local function ReadBypassFile()
         return false
     end
 
-    return tostring(Content)
-        :lower()
-        :match("^%s*true%s*$") ~= nil
+    return tostring(Content):lower():match("^%s*true%s*$") ~= nil
 end
 
 local function WriteBypassFile(Value)
@@ -433,8 +411,7 @@ local function CreateMainLibrary()
 end
 
 local function CreateAddon(FileName, Library)
-    local Source =
-        DownloadSource(repo .. "addons/" .. FileName)
+    local Source = DownloadSource(repo .. "addons/" .. FileName)
 
     if not Source then
         return nil
@@ -461,11 +438,7 @@ local function CreateAddon(FileName, Library)
     return Addon
 end
 
-local function LoadMainUI(
-    Library,
-    SaveManager,
-    ThemeManager
-)
+local function LoadMainUI(Library, SaveManager, ThemeManager)
     local Success, ErrorMessage = pcall(function()
 
         local function Notify(Title, Description)
@@ -497,9 +470,7 @@ local function LoadMainUI(
         task.wait(0.2)
 
         Loading:SetMessage("Initializing...")
-        Loading:SetDescription(
-            "Waiting for game to load..."
-        )
+        Loading:SetDescription("Waiting for game to load...")
 
         task.wait(0.5)
 
@@ -508,9 +479,7 @@ local function LoadMainUI(
         task.wait(0.5)
 
         Loading:SetCurrentStep(1)
-        Loading:SetDescription(
-            "Loading configuration..."
-        )
+        Loading:SetDescription("Loading configuration...")
 
         if Loading.Sidebar then
             pcall(function()
@@ -519,7 +488,7 @@ local function LoadMainUI(
                 )
 
                 Loading.Sidebar:AddLabel(
-                    "Version: v0.2"
+                    "Version: v0.3"
                 )
             end)
         end
@@ -552,9 +521,7 @@ local function LoadMainUI(
         task.wait(1.5)
 
         Loading:SetCurrentStep(4)
-        Loading:SetDescription(
-            "Ready to start!"
-        )
+        Loading:SetDescription("Ready to start!")
 
         task.wait(0.5)
 
@@ -562,17 +529,23 @@ local function LoadMainUI(
 
         task.wait(0.5)
 
-        local Window = Library:CreateWindow({
-            Title = "DoorsHack",
-            Footer =
-                "version: 0.2 | Executor: "
-                .. ExecutorName,
-            Resizable = true,
-            Center = true,
-            Icon = 11358524205,
-            NotifySide = "Right",
-            ShowCustomCursor = true,
-        })
+local Window = Library:CreateWindow({
+    Title = "DoorsHack",
+    Footer =
+        "version: v0.3 | Executor: "
+        .. tostring(ExecutorName)
+        .. " | User: "
+        .. tostring(Player and Player.Name or "Unknown")
+        .. " | Floor: "
+        .. tostring(
+            rs:WaitForChild("GameData"):WaitForChild("Floor").Value
+        ),
+    Resizable = true,
+    Center = true,
+    Icon = 11358524205,
+    NotifySide = "Right",
+    ShowCustomCursor = true,
+})
 
         local Tabs = {
             Main = Window:AddTab(
@@ -600,6 +573,51 @@ local function LoadMainUI(
             Tabs.Main:AddLeftGroupbox(
                 "Player"
             )
+
+        local MusicEnabled = false
+        local MusicSound
+
+        local function StartMusic()
+            if MusicSound and MusicSound.Parent then
+                MusicSound:Play()
+                return
+            end
+
+            MusicSound = Instance.new("Sound")
+            MusicSound.Name = "DoorsHackMusic"
+            MusicSound.SoundId = "rbxassetid://127304317285227"
+            MusicSound.Volume = 1
+            MusicSound.Looped = true
+            MusicSound.Parent = game:GetService("SoundService")
+
+            MusicSound:Play()
+        end
+
+        local function StopMusic()
+            if MusicSound then
+                MusicSound:Stop()
+                MusicSound:Destroy()
+                MusicSound = nil
+            end
+        end
+
+        MainGroup:AddToggle(
+            "MusicToggle",
+            {
+                Text = "Music",
+                Default = false,
+
+                Callback = function(Value)
+                    MusicEnabled = Value == true
+
+                    if MusicEnabled then
+                        StartMusic()
+                    else
+                        StopMusic()
+                    end
+                end,
+            }
+        )
 
         local MovementGroup =
             Tabs.Main:AddRightGroupbox(
@@ -641,13 +659,354 @@ local function LoadMainUI(
                 "Configuration"
             )
 
+        local UserThumbnail =
+            Players:GetUserThumbnailAsync(
+                Player.UserId,
+                Enum.ThumbnailType.HeadShot,
+                Enum.ThumbnailSize.Size420x420
+            )
+
+        local Groupbox9 =
+            Tabs.Main:AddRightGroupbox("User")
+
+        Groupbox9:AddImage("MyImage", {
+            Image = UserThumbnail,
+            Callback = function(image)
+                print("Image changed!", image)
+            end,
+        })
+
+        Groupbox9:AddLabel("Welcome to DoorsHack, " .. tostring(Player and Player.Name or "Unknown"))
+        ----------------------------------------------------------------
+        -- FREECAM
+        ----------------------------------------------------------------
+
+        local FreecamEnabled = false
+        local FreecamConnection
+        local FreecamInputConnection
+        local FreecamInputEndedConnection
+
+        local FreecamPosition
+        local FreecamRotation = Vector2.zero
+        local FreecamFOV = 70
+
+        local FreecamMoveSpeed = 50
+        local FreecamSensitivity = 0.0025
+
+        local FreecamKeys = {
+            W = false,
+            A = false,
+            S = false,
+            D = false,
+            Space = false,
+            LeftControl = false,
+        }
+
+        local FreecamPreviousCameraType
+        local FreecamPreviousCameraSubject
+        local FreecamPreviousFOV
+        local FreecamMouseBehavior
+        local FreecamMouseIconEnabled
+
+        local function StartFreecam()
+            if FreecamEnabled then
+                return
+            end
+
+            local Camera = workspace.CurrentCamera
+
+            if not Camera then
+                return
+            end
+
+            FreecamEnabled = true
+
+            local Character = Player.Character
+            local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+            if Humanoid then
+                Humanoid.WalkSpeed = 0
+            end
+
+            FreecamPosition = Camera.CFrame.Position
+
+            local X, Y, Z =
+                Camera.CFrame:ToOrientation()
+
+            FreecamRotation =
+                Vector2.new(Y, X)
+
+            FreecamFOV = Camera.FieldOfView
+
+            FreecamPreviousCameraType =
+                Camera.CameraType
+
+            FreecamPreviousCameraSubject =
+                Camera.CameraSubject
+
+            FreecamPreviousFOV =
+                Camera.FieldOfView
+
+            FreecamMouseBehavior =
+                UserInputService.MouseBehavior
+
+            FreecamMouseIconEnabled =
+                UserInputService.MouseIconEnabled
+
+            Camera.CameraType =
+                Enum.CameraType.Scriptable
+
+            UserInputService.MouseBehavior =
+                Enum.MouseBehavior.LockCenter
+
+            UserInputService.MouseIconEnabled =
+                false
+
+            table.clear(FreecamKeys)
+
+            FreecamKeys.W = false
+            FreecamKeys.A = false
+            FreecamKeys.S = false
+            FreecamKeys.D = false
+            FreecamKeys.Space = false
+            FreecamKeys.LeftControl = false
+
+            FreecamInputConnection =
+                UserInputService.InputBegan:Connect(
+                    function(Input, GameProcessed)
+                        if GameProcessed or not FreecamEnabled then
+                            return
+                        end
+
+                        if Input.UserInputType == Enum.UserInputType.Keyboard then
+                            if Input.KeyCode == Enum.KeyCode.W then
+                                FreecamKeys.W = true
+                            elseif Input.KeyCode == Enum.KeyCode.A then
+                                FreecamKeys.A = true
+                            elseif Input.KeyCode == Enum.KeyCode.S then
+                                FreecamKeys.S = true
+                            elseif Input.KeyCode == Enum.KeyCode.D then
+                                FreecamKeys.D = true
+                            elseif Input.KeyCode == Enum.KeyCode.Space then
+                                FreecamKeys.Space = true
+                            elseif Input.KeyCode == Enum.KeyCode.LeftControl then
+                                FreecamKeys.LeftControl = true
+                            end
+                        elseif Input.UserInputType == Enum.UserInputType.MouseButton3 then
+                            UserInputService.MouseBehavior =
+                                Enum.MouseBehavior.LockCenter
+                        end
+                    end
+                )
+
+            FreecamInputEndedConnection =
+                UserInputService.InputEnded:Connect(
+                    function(Input)
+                        if Input.UserInputType ~= Enum.UserInputType.Keyboard then
+                            return
+                        end
+
+                        if Input.KeyCode == Enum.KeyCode.W then
+                            FreecamKeys.W = false
+                        elseif Input.KeyCode == Enum.KeyCode.A then
+                            FreecamKeys.A = false
+                        elseif Input.KeyCode == Enum.KeyCode.S then
+                            FreecamKeys.S = false
+                        elseif Input.KeyCode == Enum.KeyCode.D then
+                            FreecamKeys.D = false
+                        elseif Input.KeyCode == Enum.KeyCode.Space then
+                            FreecamKeys.Space = false
+                        elseif Input.KeyCode == Enum.KeyCode.LeftControl then
+                            FreecamKeys.LeftControl = false
+                        end
+                    end
+                )
+
+            FreecamConnection =
+                RunService:BindToRenderStep(
+                    "DoorsHackFreecam",
+                    Enum.RenderPriority.Camera.Value + 1,
+                    function(Delta)
+                        if not FreecamEnabled then
+                            return
+                        end
+
+                        local CurrentCamera =
+                            workspace.CurrentCamera
+
+                        if not CurrentCamera then
+                            return
+                        end
+
+                        local MouseDelta =
+                            UserInputService:GetMouseDelta()
+
+                        FreecamRotation =
+                            FreecamRotation
+                            + Vector2.new(
+                                -MouseDelta.X
+                                    * FreecamSensitivity,
+                                -MouseDelta.Y
+                                    * FreecamSensitivity
+                            )
+
+                        FreecamRotation =
+                            Vector2.new(
+                                FreecamRotation.X,
+                                math.clamp(
+                                    FreecamRotation.Y,
+                                    math.rad(-89),
+                                    math.rad(89)
+                                )
+                            )
+
+                        local Rotation =
+                            CFrame.Angles(
+                                0,
+                                FreecamRotation.X,
+                                0
+                            )
+                            * CFrame.Angles(
+                                FreecamRotation.Y,
+                                0,
+                                0
+                            )
+
+                        local MoveDirection =
+                            Vector3.zero
+
+                        if FreecamKeys.W then
+                            MoveDirection +=
+                                Rotation.LookVector
+                        end
+
+                        if FreecamKeys.S then
+                            MoveDirection -=
+                                Rotation.LookVector
+                        end
+
+                        if FreecamKeys.D then
+                            MoveDirection +=
+                                Rotation.RightVector
+                        end
+
+                        if FreecamKeys.A then
+                            MoveDirection -=
+                                Rotation.RightVector
+                        end
+
+                        if FreecamKeys.Space then
+                            MoveDirection +=
+                                Vector3.yAxis
+                        end
+
+                        if FreecamKeys.LeftControl then
+                            MoveDirection -=
+                                Vector3.yAxis
+                        end
+
+                        if MoveDirection.Magnitude > 0 then
+                            FreecamPosition +=
+                                MoveDirection.Unit
+                                * FreecamMoveSpeed
+                                * Delta
+                        end
+
+                        CurrentCamera.CFrame =
+                            CFrame.new(FreecamPosition)
+                            * Rotation
+
+                        CurrentCamera.FieldOfView =
+                            FreecamFOV
+                    end
+                )
+        end
+
+        local function StopFreecam()
+            if not FreecamEnabled then
+                return
+            end
+
+            FreecamEnabled = false
+
+            Humanoid.WalkSpeed = 16
+
+            pcall(function()
+                RunService:UnbindFromRenderStep(
+                    "DoorsHackFreecam"
+                )
+            end)
+
+            if FreecamInputConnection then
+                FreecamInputConnection:Disconnect()
+                FreecamInputConnection = nil
+            end
+
+            if FreecamInputEndedConnection then
+                FreecamInputEndedConnection:Disconnect()
+                FreecamInputEndedConnection = nil
+            end
+
+            local Camera = workspace.CurrentCamera
+
+            if Camera then
+                Camera.CameraType =
+                    FreecamPreviousCameraType
+                    or Enum.CameraType.Custom
+
+                if FreecamPreviousCameraSubject then
+                    Camera.CameraSubject =
+                        FreecamPreviousCameraSubject
+                end
+
+                Camera.FieldOfView =
+                    FreecamPreviousFOV
+                    or 70
+            end
+
+            UserInputService.MouseBehavior =
+                FreecamMouseBehavior
+                or Enum.MouseBehavior.Default
+
+            UserInputService.MouseIconEnabled =
+                FreecamMouseIconEnabled ~= false
+
+            FreecamPosition = nil
+            FreecamRotation = Vector2.zero
+        end
+
+        local FreecamToggle =
+            MainGroup:AddToggle(
+                "FreecamToggle",
+                {
+                    Text = "Freecam",
+                    Default = false,
+
+                    Callback = function(Value)
+                        if Value then
+                            StartFreecam()
+                        else
+                            StopFreecam()
+                        end
+                    end,
+                }
+            )
+
+        FreecamToggle:AddKeyPicker(
+            "FreecamKeybind",
+            {
+                Default = "Q",
+                Text = "Freecam",
+                Mode = "Toggle",
+                SyncToggleState = true,
+            }
+        )
+
         ----------------------------------------------------------------
         -- INSTANT UNLOCK PROMPTS
         ----------------------------------------------------------------
 
-        for _, Object in ipairs(
-            workspace:GetDescendants()
-        ) do
+        for _, Object in ipairs(workspace:GetDescendants()) do
             if Object:IsA("ProximityPrompt") then
                 ForcePromptInstant(Object)
             end
@@ -1110,6 +1469,10 @@ local function LoadMainUI(
         end
 
         local function ApplyFOV()
+            if FreecamEnabled then
+                return
+            end
+
             local GlobalFOV =
                 tonumber(GlobalEnv.CurrentFOV)
 
@@ -1549,8 +1912,13 @@ local function LoadMainUI(
             Eyes = "Eyes",
             Screech = "Screech",
             FigureRig = "Figure",
+            Dupe = "Dupe",
+            SeekMovingNewClone = "Seek",
+            SallyMoving = "Sally",
+            Spider = "Timothy",
             SurgeSpawn = "Surge",
             Mandrake = "Mandrake",
+            BackdoorRush = "Blitz",
             Snare = "Snare",
             Dread = "Dread",
             Drones = "Drone",
@@ -1613,6 +1981,7 @@ local function LoadMainUI(
 
             return Name == "Wardrobe"
                 or Name == "Double_Bed"
+                or Name == "Wardrobe-FOOLS26"
                 or Name == "Bed"
                 or Name == "Locker_Large"
                 or Name == "Dumpster"
@@ -1647,12 +2016,20 @@ local function LoadMainUI(
                 ) ~= nil
             end
 
+            if Name == "Table" then
+                return Object:FindFirstChild(
+                    "DrawerContainer"
+                ) ~= nil
+            end
+
             return Name == "Toolshed_Small"
                 or Name == "Dresser"
                 or Name == "ChestBox"
                 or Name == "ChestBoxLocked"
                 or Name == "Toolbox"
                 or Name == "Toolbox_Locked"
+                or Name == "Dresser_Single"
+                or Name == "Rolltop_Desk"
                 or Name == "Locker_Small"
                 or Name == "Locker_Small_Locked"
         end
@@ -1684,6 +2061,7 @@ local function LoadMainUI(
                 or Name == "Lockpick"
                 or Name == "Candle"
                 or Name == "Vitamins"
+                or Name == "Flashlight"
                 or IsLighterObject(Object)
                 or Name == "FuseObtain"
         end
@@ -1705,6 +2083,10 @@ local function LoadMainUI(
                     or Name == "Fih2"
                     or Name == "Head"
                     or Name == "Birchtree"
+                    or Name == "RightEye"
+                    or Name == "LeftEye"
+                    or Name == "Spider"
+                    or Name == "Buddy-Head"
                     or Name == "Fih3" then
                     return true
                 end
@@ -1741,10 +2123,6 @@ local function LoadMainUI(
 
             return false
         end
-
-        ----------------------------------------------------------------
-        -- ESP IGNORE SYSTEM
-        ----------------------------------------------------------------
 
         local function IsBushObject(Object)
             if not Object then
@@ -2590,79 +2968,106 @@ local function LoadMainUI(
             end
         })
 
-local RemotesFolder =
-    rs:FindFirstChild("RemotesFolder")
+        TrollGroup:AddButton({
+            Text = "Turn Invisible",
 
-local Event =
-    RemotesFolder
-    and RemotesFolder:FindFirstChild("Revive")
+            Func = function()
+                local Character = Player.Character
 
-if Event and Event:IsA("RemoteEvent") then
-    TrollGroup:AddButton({
-        Text = "Revive",
+                if not Character then
+                    return
+                end
 
-        Func = function()
-            Event:FireServer()
+                for _, Object in ipairs(
+                    Character:GetDescendants()
+                ) do
+                    if Object:IsA("BasePart") then
+                        Object.LocalTransparencyModifier = 1
+                    elseif Object:IsA("Decal") then
+                        Object.Transparency = 1
+                    end
+                end
+
+                Notify(
+                    "Invisible",
+                    "You are now invisible."
+                )
+            end
+        })
+
+        local ReviveRemotesFolder =
+            rs:FindFirstChild("RemotesFolder")
+
+        local ReviveEvent =
+            ReviveRemotesFolder
+            and ReviveRemotesFolder:FindFirstChild("Revive")
+
+        if ReviveEvent and ReviveEvent:IsA("RemoteEvent") then
+            TrollGroup:AddButton({
+                Text = "Revive",
+
+                Func = function()
+                    ReviveEvent:FireServer()
+                end
+            })
+        else
+            warn("DoorsHack: Failed to find the Revive RemoteEvent.")
         end
-    })
-else
-    warn("DoorsHack: Failed to find the Revive RemoteEvent.")
-end
 
-local RemotesFolder =
-    rs:FindFirstChild("RemotesFolder")
+        local LobbyRemotesFolder =
+            rs:FindFirstChild("RemotesFolder")
 
-local Event =
-    RemotesFolder
-    and RemotesFolder:FindFirstChild("Lobby")
+        local LobbyEvent =
+            LobbyRemotesFolder
+            and LobbyRemotesFolder:FindFirstChild("Lobby")
 
-if Event and Event:IsA("RemoteEvent") then
-    TrollGroup:AddButton({
-        Text = "Go to Lobby",
+        if LobbyEvent and LobbyEvent:IsA("RemoteEvent") then
+            TrollGroup:AddButton({
+                Text = "Go to Lobby",
 
-        Func = function()
-            Event:FireServer()
+                Func = function()
+                    LobbyEvent:FireServer()
+                end
+            })
+        else
+            warn("DoorsHack: Failed to find the Lobby RemoteEvent.")
         end
-    })
-else
-    warn("DoorsHack: Failed to find the Lobby RemoteEvent.")
-end
 
-local RemotesFolder =
-    rs:FindFirstChild("RemotesFolder")
+        local PlayAgainRemotesFolder =
+            rs:FindFirstChild("RemotesFolder")
 
-local Event =
-    RemotesFolder
-    and RemotesFolder:FindFirstChild("PlayAgain")
+        local PlayAgainEvent =
+            PlayAgainRemotesFolder
+            and PlayAgainRemotesFolder:FindFirstChild("PlayAgain")
 
-if Event and Event:IsA("RemoteEvent") then
-    TrollGroup:AddButton({
-        Text = "Play Again",
+        if PlayAgainEvent and PlayAgainEvent:IsA("RemoteEvent") then
+            TrollGroup:AddButton({
+                Text = "Play Again",
 
-        Func = function()
-            Event:FireServer()
+                Func = function()
+                    PlayAgainEvent:FireServer()
+                end
+            })
+        else
+            warn("DoorsHack: Failed to find the PlayAgain RemoteEvent.")
         end
-    })
-else
-    warn("DoorsHack: Failed to find the PlayAgain RemoteEvent.")
-end
 
-local Gold =
-    Player:WaitForChild("Gold", 10)
+        local Gold =
+            Player:WaitForChild("Gold", 10)
 
-_G.Gold = Gold
+        _G.Gold = Gold
 
-if Gold and Gold:IsA("IntValue") then
-    TrollGroup:AddButton({
-        Text = "Get Infinite Gold",
+        if Gold and Gold:IsA("IntValue") then
+            TrollGroup:AddButton({
+                Text = "Get Infinite Gold",
 
-        Func = function()
-            Gold.Value = 999999999999999
+                Func = function()
+                    Gold.Value = 999999999999999
+                end
+            })
+        else
+            warn("DoorsHack: Failed to find the Gold IntValue.")
         end
-    })
-else
-    warn("DoorsHack: Failed to find the Gold IntValue.")
-end
 
         ----------------------------------------------------------------
         -- MENU
@@ -2858,7 +3263,9 @@ end
                     SetHighlight(true)
                 end
 
-                ApplyFOV()
+                if not FreecamEnabled then
+                    ApplyFOV()
+                end
 
                 if ESPEnabled then
                     ScanESP()
@@ -2881,9 +3288,18 @@ end
 
         Library:OnUnload(
             function()
+                StopFreecam()
+
+                pcall(function()
+                    RunService:UnbindFromRenderStep(
+                        "DoorsHackGlobalFOV"
+                    )
+                end)
+
                 StopFly()
                 SetNoclip(false)
                 StopAnchorLoop()
+                StopMusic()
                 ClearESP()
                 StopNotifier()
                 StopAutoKeyObtain()
