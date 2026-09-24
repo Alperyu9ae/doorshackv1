@@ -1,4 +1,4 @@
-local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
+ local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
 
 local ExecutorName = identifyexecutor and identifyexecutor() or "Unknown Executor"
 
@@ -219,6 +219,28 @@ if not AuthLibrary then
     error("DoorsHack: " .. tostring(AuthLibraryError))
 end
 
+if workspace:FindFirstChild("Lobby") then
+    pcall(function()
+        AuthLibrary:Notify({
+            Title = "Error To Execute",
+            Description = "youre in lobby",
+            Time = 4,
+        })
+
+        local AlertSound = Instance.new("Sound")
+        AlertSound.SoundId = "rbxassetid://6026984224"
+        AlertSound.Volume = 1
+        AlertSound.Parent = game:GetService("SoundService")
+        AlertSound:Play()
+
+        AlertSound.Ended:Connect(function()
+            AlertSound:Destroy()
+        end)
+    end)
+
+    return
+end
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -233,6 +255,17 @@ local KEY_GET_URL = KEY_SERVER
 
 local BYPASS_USERNAME = "alperyuHacker11ae"
 local BYPASS_FILE = "BypassKeyCheck.txt"
+
+local ServerTimeOffset = 0
+local KeyExpiresAt = 0
+
+local function GetServerNow()
+    return DateTime.now().UnixTimestampMillis + ServerTimeOffset
+end
+
+local function GetRemainingTime()
+    return math.max(0, KeyExpiresAt - GetServerNow())
+end
 
 local function AuthNotify(Title, Description)
     pcall(function()
@@ -313,23 +346,6 @@ local function VerifyKey(Key)
     local Body = GetResponseBody(Response)
 
     if not Body then
-        if type(Response) == "table" then
-            local Debug = {}
-
-            for KeyName, Value in pairs(Response) do
-                table.insert(
-                    Debug,
-                    tostring(KeyName) .. "=" .. tostring(Value)
-                )
-            end
-
-            if #Debug > 0 then
-                return false,
-                    "No response body. Returned: "
-                    .. table.concat(Debug, " | ")
-            end
-        end
-
         return false, "Server returned no response body."
     end
 
@@ -337,19 +353,42 @@ local function VerifyKey(Key)
         return HttpService:JSONDecode(Body)
     end)
 
-    if not DecodeSuccess then
+    if not DecodeSuccess or type(Data) ~= "table" then
         return false, "Server returned invalid JSON."
     end
 
-    if type(Data) ~= "table" then
-        return false, "Server returned an invalid response."
-    end
-
     if Data.valid == true then
-        return true, "Key is valid!"
+        local ServerNow =
+            tonumber(Data.serverNow or Data.server_now)
+
+        local ExpiresAt =
+            tonumber(
+                Data.expiresAt
+                or Data.expires
+                or Data.expiration
+                or Data.expiry
+            )
+
+        if not ServerNow then
+            return false, "Server did not provide server time."
+        end
+
+        if not ExpiresAt then
+            return false, "Server did not provide expiration time."
+        end
+
+        ServerTimeOffset =
+            ServerNow
+            - DateTime.now().UnixTimestampMillis
+
+        KeyExpiresAt = ExpiresAt
+
+        _G.DoorsHackKeyExpiresAt = ExpiresAt
+
+        return true, "Key is valid!", ExpiresAt
     end
 
-    return false, tostring(Data.error or "Invalid key.")
+    return false, tostring(Data.error or "Invalid key."), nil
 end
 
 local function ReadBypassFile()
@@ -553,6 +592,11 @@ local Window = Library:CreateWindow({
                 "user"
             ),
 
+            Key = Window:AddTab(
+                "Key",
+                "key"
+            ),
+
             Visuals = Window:AddTab(
                 "Visuals",
                 "eye"
@@ -671,12 +715,157 @@ local Window = Library:CreateWindow({
 
         Groupbox9:AddImage("MyImage", {
             Image = UserThumbnail,
-            Callback = function(image)
-                print("Image changed!", image)
-            end,
         })
 
         Groupbox9:AddLabel("Welcome to DoorsHack, " .. tostring(Player and Player.Name or "Unknown"))
+
+        ----------------------------------------------------------------
+        -- KEY TAB
+        ----------------------------------------------------------------
+
+        local KeyGroupBox =
+            Tabs.Key:AddLeftGroupbox(
+                "Key"
+            )
+
+        local KeyPlayerThumbnail =
+            Players:GetUserThumbnailAsync(
+                Player.UserId,
+                Enum.ThumbnailType.HeadShot,
+                Enum.ThumbnailSize.Size420x420
+            )
+
+        KeyGroupBox:AddImage(
+            "KeyPlayerPhoto",
+            {
+                Image = KeyPlayerThumbnail,
+            }
+        )
+
+        KeyGroupBox:AddLabel(
+            tostring(Player.DisplayName or Player.Name)
+        )
+
+        KeyGroupBox:AddLabel(
+            "@" .. tostring(Player.Name)
+        )
+
+        KeyGroupBox:AddDivider()
+
+        KeyGroupBox:AddLabel(
+            "Key Expire Time:"
+        )
+
+        local KeyExpireLabel =
+            KeyGroupBox:AddLabel(
+                "24:00:00"
+            )
+
+        local KeyExpired = false
+        local KeyBypassed =
+            _G.DoorsHackKeyBypassed == true
+
+        if not KeyBypassed then
+            KeyExpiresAt =
+                tonumber(_G.DoorsHackKeyExpiresAt)
+                or KeyExpiresAt
+        end
+
+        local function GetRemainingKeyTime()
+            if KeyBypassed or KeyExpiresAt <= 0 then
+                return nil
+            end
+
+            return GetRemainingTime()
+        end
+
+        local function FormatKeyTime(Milliseconds)
+            local TotalSeconds =
+                math.max(
+                    0,
+                    math.floor(Milliseconds / 1000)
+                )
+
+            local Hours =
+                math.floor(TotalSeconds / 3600)
+
+            local Minutes =
+                math.floor((TotalSeconds % 3600) / 60)
+
+            local Seconds =
+                TotalSeconds % 60
+
+            return string.format(
+                "%02d:%02d:%02d",
+                Hours,
+                Minutes,
+                Seconds
+            )
+        end
+
+        local function UpdateKeyExpireLabel()
+            if KeyBypassed then
+                KeyExpireLabel:SetText("∞")
+                return
+            end
+
+            if KeyExpired then
+                KeyExpireLabel:SetText("00:00:00")
+                return
+            end
+
+            local Remaining = GetRemainingKeyTime()
+
+            if not Remaining then
+                KeyExpireLabel:SetText("Unknown")
+                return
+            end
+
+            if Remaining <= 0 then
+                KeyExpired = true
+                KeyExpireLabel:SetText("00:00:00")
+                return
+            end
+
+            KeyExpireLabel:SetText(
+                FormatKeyTime(Remaining)
+            )
+        end
+
+        KeyGroupBox:AddButton({
+            Text = "Expire key",
+            Risky = true,
+
+            Func = function()
+                KeyExpired = true
+                KeyExpiresAt = GetServerNow()
+
+                _G.DoorsHackKeyExpiresAt = KeyExpiresAt
+                _G.DoorsHackKey = nil
+
+                UpdateKeyExpireLabel()
+
+                pcall(function()
+                    AuthNotify(
+                        "DoorsHack",
+                        "Key expired locally."
+                    )
+                end)
+            end
+        })
+
+        task.spawn(function()
+            while task.wait(0.25) do
+                if Library.Unloaded then
+                    break
+                end
+
+                UpdateKeyExpireLabel()
+            end
+        end)
+
+        UpdateKeyExpireLabel()
+
         ----------------------------------------------------------------
         -- FREECAM
         ----------------------------------------------------------------
@@ -685,6 +874,8 @@ local Window = Library:CreateWindow({
         local FreecamConnection
         local FreecamInputConnection
         local FreecamInputEndedConnection
+        local FreecamPreviousSpeed
+        local FreecamPreviousSpeedEnabled
 
         local FreecamPosition
         local FreecamRotation = Vector2.zero
@@ -708,272 +899,310 @@ local Window = Library:CreateWindow({
         local FreecamMouseBehavior
         local FreecamMouseIconEnabled
 
-        local function StartFreecam()
-            if FreecamEnabled then
-                return
-            end
+local function StartFreecam()
+    if FreecamEnabled then
+        return
+    end
 
-            local Camera = workspace.CurrentCamera
+    local Camera = workspace.CurrentCamera
 
-            if not Camera then
-                return
-            end
+    if not Camera then
+        return
+    end
 
-            FreecamEnabled = true
+    FreecamEnabled = true
 
-            local Character = Player.Character
-            local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+    FreecamPreviousSpeed = TPWalkSpeed
+    FreecamPreviousSpeedEnabled = SpeedEnabled
 
-            if Humanoid then
-                Humanoid.WalkSpeed = 0
-            end
+    TPWalkSpeed = 0
+    _G.CurrentSpeed = 0
 
-            FreecamPosition = Camera.CFrame.Position
+    local Character = Player.Character
+    local Humanoid =
+        Character
+        and Character:FindFirstChildOfClass("Humanoid")
 
-            local X, Y, Z =
-                Camera.CFrame:ToOrientation()
+    local Root =
+        Character
+        and Character:FindFirstChild("HumanoidRootPart")
 
-            FreecamRotation =
-                Vector2.new(Y, X)
+    if Humanoid then
+        Humanoid.WalkSpeed = 0
+    end
 
-            FreecamFOV = Camera.FieldOfView
+    if Root then
+        Root.Anchored = true
+    end
 
-            FreecamPreviousCameraType =
-                Camera.CameraType
+    FreecamPosition = Camera.CFrame.Position
+    FreecamRotation =
+        Vector2.new(
+            Camera.CFrame:ToOrientation()
+        )
 
-            FreecamPreviousCameraSubject =
-                Camera.CameraSubject
+    FreecamPreviousCameraType = Camera.CameraType
+    FreecamPreviousCameraSubject = Camera.CameraSubject
+    FreecamPreviousFOV = Camera.FieldOfView
 
-            FreecamPreviousFOV =
-                Camera.FieldOfView
+    FreecamFOV = Camera.FieldOfView
 
-            FreecamMouseBehavior =
-                UserInputService.MouseBehavior
+    FreecamMouseBehavior =
+        UserInputService.MouseBehavior
 
-            FreecamMouseIconEnabled =
-                UserInputService.MouseIconEnabled
+    FreecamMouseIconEnabled =
+        UserInputService.MouseIconEnabled
 
-            Camera.CameraType =
-                Enum.CameraType.Scriptable
+    Camera.CameraType = Enum.CameraType.Scriptable
+    Camera.FieldOfView = FreecamFOV
 
-            UserInputService.MouseBehavior =
-                Enum.MouseBehavior.LockCenter
+    UserInputService.MouseBehavior =
+        Enum.MouseBehavior.LockCenter
 
-            UserInputService.MouseIconEnabled =
-                false
+    UserInputService.MouseIconEnabled = false
 
-            table.clear(FreecamKeys)
+    FreecamInputConnection =
+        UserInputService.InputBegan:Connect(
+            function(Input, GameProcessed)
+                if GameProcessed then
+                    return
+                end
 
-            FreecamKeys.W = false
-            FreecamKeys.A = false
-            FreecamKeys.S = false
-            FreecamKeys.D = false
-            FreecamKeys.Space = false
-            FreecamKeys.LeftControl = false
+                if Input.UserInputType
+                    == Enum.UserInputType.Keyboard then
 
-            FreecamInputConnection =
-                UserInputService.InputBegan:Connect(
-                    function(Input, GameProcessed)
-                        if GameProcessed or not FreecamEnabled then
-                            return
-                        end
+                    local Key =
+                        Input.KeyCode.Name
 
-                        if Input.UserInputType == Enum.UserInputType.Keyboard then
-                            if Input.KeyCode == Enum.KeyCode.W then
-                                FreecamKeys.W = true
-                            elseif Input.KeyCode == Enum.KeyCode.A then
-                                FreecamKeys.A = true
-                            elseif Input.KeyCode == Enum.KeyCode.S then
-                                FreecamKeys.S = true
-                            elseif Input.KeyCode == Enum.KeyCode.D then
-                                FreecamKeys.D = true
-                            elseif Input.KeyCode == Enum.KeyCode.Space then
-                                FreecamKeys.Space = true
-                            elseif Input.KeyCode == Enum.KeyCode.LeftControl then
-                                FreecamKeys.LeftControl = true
-                            end
-                        elseif Input.UserInputType == Enum.UserInputType.MouseButton3 then
-                            UserInputService.MouseBehavior =
-                                Enum.MouseBehavior.LockCenter
-                        end
+                    if FreecamKeys[Key] ~= nil then
+                        FreecamKeys[Key] = true
                     end
-                )
+                end
+            end
+        )
 
-            FreecamInputEndedConnection =
-                UserInputService.InputEnded:Connect(
-                    function(Input)
-                        if Input.UserInputType ~= Enum.UserInputType.Keyboard then
-                            return
-                        end
+    FreecamInputEndedConnection =
+        UserInputService.InputEnded:Connect(
+            function(Input)
+                if Input.UserInputType
+                    == Enum.UserInputType.Keyboard then
 
-                        if Input.KeyCode == Enum.KeyCode.W then
-                            FreecamKeys.W = false
-                        elseif Input.KeyCode == Enum.KeyCode.A then
-                            FreecamKeys.A = false
-                        elseif Input.KeyCode == Enum.KeyCode.S then
-                            FreecamKeys.S = false
-                        elseif Input.KeyCode == Enum.KeyCode.D then
-                            FreecamKeys.D = false
-                        elseif Input.KeyCode == Enum.KeyCode.Space then
-                            FreecamKeys.Space = false
-                        elseif Input.KeyCode == Enum.KeyCode.LeftControl then
-                            FreecamKeys.LeftControl = false
-                        end
+                    local Key =
+                        Input.KeyCode.Name
+
+                    if FreecamKeys[Key] ~= nil then
+                        FreecamKeys[Key] = false
                     end
-                )
+                end
+            end
+        )
 
-            FreecamConnection =
-                RunService:BindToRenderStep(
-                    "DoorsHackFreecam",
-                    Enum.RenderPriority.Camera.Value + 1,
-                    function(Delta)
-                        if not FreecamEnabled then
-                            return
-                        end
+    FreecamConnection =
+        UserInputService.InputChanged:Connect(
+            function(Input)
+                if not FreecamEnabled then
+                    return
+                end
 
-                        local CurrentCamera =
-                            workspace.CurrentCamera
+                if Input.UserInputType
+                    == Enum.UserInputType.MouseMovement then
 
-                        if not CurrentCamera then
-                            return
-                        end
+                    FreecamRotation =
+                        FreecamRotation
+                        + Vector2.new(
+                            -Input.Delta.Y,
+                            -Input.Delta.X
+                        ) * FreecamSensitivity
 
-                        local MouseDelta =
-                            UserInputService:GetMouseDelta()
-
-                        FreecamRotation =
-                            FreecamRotation
-                            + Vector2.new(
-                                -MouseDelta.X
-                                    * FreecamSensitivity,
-                                -MouseDelta.Y
-                                    * FreecamSensitivity
-                            )
-
-                        FreecamRotation =
-                            Vector2.new(
+                    FreecamRotation =
+                        Vector2.new(
+                            math.clamp(
                                 FreecamRotation.X,
-                                math.clamp(
-                                    FreecamRotation.Y,
-                                    math.rad(-89),
-                                    math.rad(89)
-                                )
-                            )
+                                -math.rad(89),
+                                math.rad(89)
+                            ),
+                            FreecamRotation.Y
+                        )
+                end
+            end
+        )
 
-                        local Rotation =
-                            CFrame.Angles(
-                                0,
-                                FreecamRotation.X,
-                                0
-                            )
-                            * CFrame.Angles(
-                                FreecamRotation.Y,
-                                0,
-                                0
-                            )
-
-                        local MoveDirection =
-                            Vector3.zero
-
-                        if FreecamKeys.W then
-                            MoveDirection +=
-                                Rotation.LookVector
-                        end
-
-                        if FreecamKeys.S then
-                            MoveDirection -=
-                                Rotation.LookVector
-                        end
-
-                        if FreecamKeys.D then
-                            MoveDirection +=
-                                Rotation.RightVector
-                        end
-
-                        if FreecamKeys.A then
-                            MoveDirection -=
-                                Rotation.RightVector
-                        end
-
-                        if FreecamKeys.Space then
-                            MoveDirection +=
-                                Vector3.yAxis
-                        end
-
-                        if FreecamKeys.LeftControl then
-                            MoveDirection -=
-                                Vector3.yAxis
-                        end
-
-                        if MoveDirection.Magnitude > 0 then
-                            FreecamPosition +=
-                                MoveDirection.Unit
-                                * FreecamMoveSpeed
-                                * Delta
-                        end
-
-                        CurrentCamera.CFrame =
-                            CFrame.new(FreecamPosition)
-                            * Rotation
-
-                        CurrentCamera.FieldOfView =
-                            FreecamFOV
-                    end
-                )
-        end
-
-        local function StopFreecam()
+    RunService:BindToRenderStep(
+        "DoorsHackFreecam",
+        Enum.RenderPriority.Camera.Value + 1,
+        function(DeltaTime)
             if not FreecamEnabled then
                 return
             end
 
-            FreecamEnabled = false
+            local CurrentCharacter =
+                Player.Character
 
-            Humanoid.WalkSpeed = 16
-
-            pcall(function()
-                RunService:UnbindFromRenderStep(
-                    "DoorsHackFreecam"
+            local CurrentRoot =
+                CurrentCharacter
+                and CurrentCharacter:FindFirstChild(
+                    "HumanoidRootPart"
                 )
-            end)
 
-            if FreecamInputConnection then
-                FreecamInputConnection:Disconnect()
-                FreecamInputConnection = nil
+            if CurrentRoot then
+                CurrentRoot.Anchored = true
             end
 
-            if FreecamInputEndedConnection then
-                FreecamInputEndedConnection:Disconnect()
-                FreecamInputEndedConnection = nil
+            TPWalkSpeed = 0
+            _G.CurrentSpeed = 0
+
+            local Rotation =
+                CFrame.Angles(
+                    FreecamRotation.X,
+                    FreecamRotation.Y,
+                    0
+                )
+
+            local Direction = Vector3.zero
+
+            if FreecamKeys.W then
+                Direction += Vector3.new(0, 0, -1)
             end
 
-            local Camera = workspace.CurrentCamera
-
-            if Camera then
-                Camera.CameraType =
-                    FreecamPreviousCameraType
-                    or Enum.CameraType.Custom
-
-                if FreecamPreviousCameraSubject then
-                    Camera.CameraSubject =
-                        FreecamPreviousCameraSubject
-                end
-
-                Camera.FieldOfView =
-                    FreecamPreviousFOV
-                    or 70
+            if FreecamKeys.S then
+                Direction += Vector3.new(0, 0, 1)
             end
 
-            UserInputService.MouseBehavior =
-                FreecamMouseBehavior
-                or Enum.MouseBehavior.Default
+            if FreecamKeys.A then
+                Direction += Vector3.new(-1, 0, 0)
+            end
 
-            UserInputService.MouseIconEnabled =
-                FreecamMouseIconEnabled ~= false
+            if FreecamKeys.D then
+                Direction += Vector3.new(1, 0, 0)
+            end
 
-            FreecamPosition = nil
-            FreecamRotation = Vector2.zero
+            if FreecamKeys.Space then
+                Direction += Vector3.new(0, 1, 0)
+            end
+
+            if FreecamKeys.LeftControl then
+                Direction += Vector3.new(0, -1, 0)
+            end
+
+            if Direction.Magnitude > 0 then
+                Direction = Direction.Unit
+
+                local MoveVector =
+                    Rotation:VectorToWorldSpace(
+                        Direction
+                    )
+
+                FreecamPosition +=
+                    MoveVector
+                    * FreecamMoveSpeed
+                    * DeltaTime
+            end
+
+            Camera.CFrame =
+                CFrame.new(FreecamPosition)
+                * Rotation
+
+            Camera.FieldOfView = FreecamFOV
         end
+    )
+end
+
+local function StopFreecam()
+    if not FreecamEnabled then
+        return
+    end
+
+    FreecamEnabled = false
+
+    pcall(function()
+        RunService:UnbindFromRenderStep(
+            "DoorsHackFreecam"
+        )
+    end)
+
+    if FreecamInputConnection then
+        FreecamInputConnection:Disconnect()
+        FreecamInputConnection = nil
+    end
+
+    if FreecamInputEndedConnection then
+        FreecamInputEndedConnection:Disconnect()
+        FreecamInputEndedConnection = nil
+    end
+
+    if FreecamConnection then
+        FreecamConnection:Disconnect()
+        FreecamConnection = nil
+    end
+
+    for Key in pairs(FreecamKeys) do
+        FreecamKeys[Key] = false
+    end
+
+    local Character = Player.Character
+
+    local Root =
+        Character
+        and Character:FindFirstChild(
+            "HumanoidRootPart"
+        )
+
+    local Humanoid =
+        Character
+        and Character:FindFirstChildOfClass(
+            "Humanoid"
+        )
+
+    if Root then
+        Root.Anchored = false
+    end
+
+    if Humanoid then
+        Humanoid.WalkSpeed = 16
+    end
+
+    TPWalkSpeed =
+        tonumber(FreecamPreviousSpeed)
+        or 5
+
+    _G.CurrentSpeed = TPWalkSpeed
+
+    SpeedEnabled =
+        FreecamPreviousSpeedEnabled == true
+
+    local Camera = workspace.CurrentCamera
+
+    if Camera then
+        Camera.CameraType =
+            FreecamPreviousCameraType
+            or Enum.CameraType.Custom
+
+        Camera.CameraSubject =
+            FreecamPreviousCameraSubject
+            or Humanoid
+
+        Camera.FieldOfView =
+            FreecamPreviousFOV
+            or 70
+    end
+
+    UserInputService.MouseBehavior =
+        FreecamMouseBehavior
+        or Enum.MouseBehavior.Default
+
+    UserInputService.MouseIconEnabled =
+        FreecamMouseIconEnabled ~= false
+
+    FreecamPosition = nil
+    FreecamRotation = Vector2.zero
+
+    FreecamPreviousCameraType = nil
+    FreecamPreviousCameraSubject = nil
+    FreecamPreviousFOV = nil
+
+    FreecamPreviousSpeed = nil
+    FreecamPreviousSpeedEnabled = nil
+end
 
         local FreecamToggle =
             MainGroup:AddToggle(
@@ -1421,10 +1650,6 @@ local Window = Library:CreateWindow({
             }
         )
 
-        AutosGroup:AddLabel(
-            "Automatically fires ModulePrompt inside KeyObtain"
-        )
-
         ----------------------------------------------------------------
         -- FOV
         ----------------------------------------------------------------
@@ -1558,7 +1783,7 @@ local Window = Library:CreateWindow({
                         "EntityHubLight"
 
                     PlayerLight.Range = math.huge
-                    PlayerLight.Brightness = 0.6
+                    PlayerLight.Brightness = 2
                     PlayerLight.Shadows = true
                     PlayerLight.Parent = Root
                 end
@@ -1912,6 +2137,7 @@ local Window = Library:CreateWindow({
             Eyes = "Eyes",
             Screech = "Screech",
             FigureRig = "Figure",
+            GiggleCovering = "Giggle",
             Dupe = "Dupe",
             SeekMovingNewClone = "Seek",
             SallyMoving = "Sally",
@@ -2024,6 +2250,7 @@ local Window = Library:CreateWindow({
 
             return Name == "Toolshed_Small"
                 or Name == "Dresser"
+                or Name == "Dresser-FOOLS26"
                 or Name == "ChestBox"
                 or Name == "ChestBoxLocked"
                 or Name == "Toolbox"
@@ -2050,10 +2277,12 @@ local Window = Library:CreateWindow({
             return Name == "GoldPile"
                 or Name == "TimerLever"
                 or Name == "KeyObtain"
+                or Name == "Multitool"
                 or Name == "LiveHintBook"
                 or Name == "LeverForGate"
                 or Name == "Breaker"
                 or Name == "LiveBreakerPolePickup"
+                or Name == "SallyToyObtain"
                 or Name == "Shears"
                 or Name == "PaperPlane"
                 or Name == "SkeletonKey"
@@ -2082,11 +2311,13 @@ local Window = Library:CreateWindow({
                     or Name == "Fih1"
                     or Name == "Fih2"
                     or Name == "Head"
+                    or Name == "Bat"
                     or Name == "Birchtree"
                     or Name == "RightEye"
                     or Name == "LeftEye"
                     or Name == "Spider"
                     or Name == "Buddy-Head"
+                    or Name == "Main"
                     or Name == "Fih3" then
                     return true
                 end
@@ -3399,6 +3630,10 @@ end
 if Player.Name == BYPASS_USERNAME
     and ReadBypassFile() then
 
+    _G.DoorsHackKeyBypassed = true
+    _G.DoorsHackKeyExpiresAt = nil
+    KeyExpiresAt = 0
+
     StartMain()
     return
 end
@@ -3500,7 +3735,8 @@ KeyGroup:AddButton({
 
         task.spawn(function()
             local Valid,
-                Message =
+                Message,
+                Expires =
                 VerifyKey(CleanKey)
 
             if not Valid then
@@ -3511,6 +3747,13 @@ KeyGroup:AddButton({
 
                 return
             end
+
+            _G.DoorsHackKeyBypassed = false
+            _G.DoorsHackKey =
+                CleanKey
+
+            _G.DoorsHackKeyExpiresAt =
+                tonumber(Expires)
 
             AuthNotify(
                 "DoorsHack",
