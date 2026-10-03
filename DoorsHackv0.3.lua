@@ -1,6 +1,12 @@
- local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
 
 local ExecutorName = identifyexecutor and identifyexecutor() or "Unknown Executor"
+
+local RemoteListener = game:GetService("Players").LocalPlayer.PlayerGui.MainUI.Initiator.Main_Game.RemoteListener
+
+local Jumpscares = Instance.new("Folder")
+
+Jumpscares.Parent = RemoteListener
 
 local function GetRequestFunction()
     if syn and syn.request then
@@ -1107,6 +1113,47 @@ local function StartFreecam()
     )
 end
 
+local AntisGroupBox = Tabs.Main:AddLeftGroupbox("Anti's")
+
+local AntiDroneEnabled = false
+
+local function RemoveWalkedInto(Object)
+    if Object
+        and Object:IsA("RemoteEvent")
+        and Object.Name == "WalkedInto" then
+
+        pcall(function()
+            Object:Destroy()
+        end)
+    end
+end
+
+AntisGroupBox:AddToggle("AntiDrone", {
+    Text = "Anti-Drone",
+    Default = false,
+    Callback = function(Value)
+        AntiDroneEnabled = Value
+
+        if Value then
+            for _, Object in ipairs(game:GetDescendants()) do
+                if Object:IsA("RemoteEvent") and Object.Name == "WalkedInto" then
+                    RemoveWalkedInto(Object)
+                end
+            end
+        end
+    end
+})
+
+game.DescendantAdded:Connect(function(Object)
+    if not AntiDroneEnabled then
+        return
+    end
+
+    if Object:IsA("RemoteEvent") and Object.Name == "WalkedInto" then
+        RemoveWalkedInto(Object)
+    end
+end)
+
 local function StopFreecam()
     if not FreecamEnabled then
         return
@@ -1230,6 +1277,77 @@ end
                 SyncToggleState = true,
             }
         )
+
+        local AntiWaterEnabled = false
+local OriginalHipHeight
+
+AntisGroupBox:AddToggle("AntiWater", {
+    Text = "Anti-Currents",
+    Default = false,
+
+    Callback = function(Value)
+        AntiWaterEnabled = Value
+
+        local Character = Player.Character
+        local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+        if Value then
+            if Humanoid then
+                OriginalHipHeight = Humanoid.HipHeight
+                Humanoid.HipHeight = 3
+            end
+        else
+            if Humanoid and OriginalHipHeight ~= nil then
+                Humanoid.HipHeight = OriginalHipHeight
+            end
+        end
+    end
+})
+
+local function UpdateAntiWater()
+    if not AntiWaterEnabled then
+        return
+    end
+
+    local Water = workspace:FindFirstChild("Water", true)
+    local Pool1 = workspace:FindFirstChild("Pool1", true)
+
+    if Water or Pool1 then
+        local Character = Player.Character
+        local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+        if Humanoid then
+            if OriginalHipHeight == nil then
+                OriginalHipHeight = Humanoid.HipHeight
+            end
+
+            Humanoid.HipHeight = 3
+        end
+    end
+end
+
+game.DescendantAdded:Connect(function(Object)
+    if not AntiWaterEnabled then
+        return
+    end
+
+    if Object.Name == "Water" or Object.Name == "Pool1" then
+        UpdateAntiWater()
+    end
+end)
+
+Player.CharacterAdded:Connect(function(Character)
+    if not AntiWaterEnabled then
+        return
+    end
+
+    local Humanoid = Character:WaitForChild("Humanoid", 5)
+
+    if Humanoid then
+        OriginalHipHeight = Humanoid.HipHeight
+        UpdateAntiWater()
+    end
+end)
 
         ----------------------------------------------------------------
         -- INSTANT UNLOCK PROMPTS
@@ -2137,9 +2255,15 @@ end
             Eyes = "Eyes",
             Screech = "Screech",
             FigureRig = "Figure",
+            Silence = "Silence",
+            ReboundMoving = "Rebound",
+            Frostbite = "Frostbite",
+            Death = "Ripper",
+            ["Deer God"] = "Deergod",
             GiggleCovering = "Giggle",
             Dupe = "Dupe",
             SeekMovingNewClone = "Seek",
+            ["A-60"] = "MultiMonster",
             SallyMoving = "Sally",
             Spider = "Timothy",
             SurgeSpawn = "Surge",
@@ -2153,6 +2277,18 @@ end
             ScribblesMoving = "Scribbles",
             Scribbles = "Scribbles",
             GloomPile = "Gloom Eggs",
+            Pool1 = "Electrical Water",
+            Pool2 = "Electrical Water",
+            Pool3 = "Electrical Water",
+            Pool4 = "Electrical Water",
+            Pool5 = "Electrical Water",
+            Pool6 = "Electrical Water",
+            Pool7 = "Electrical Water",
+            Pool8 = "Electrical Water",
+            Pool9 = "Electrical Water",
+            Pool10 = "Electrical Water",
+            Pool11 = "Electrical Water",
+            Pool12 = "Electrical Water",
         }
 
         local EntityColor =
@@ -2291,6 +2427,7 @@ end
                 or Name == "Candle"
                 or Name == "Vitamins"
                 or Name == "Flashlight"
+                or Name == "StairwellFireAlarm"
                 or IsLighterObject(Object)
                 or Name == "FuseObtain"
         end
@@ -2411,23 +2548,31 @@ end
             return false
         end
 
-        local function IsIgnoredESPObject(Object)
-            if not Object then
-                return true
-            end
+local function IsIgnoredESPObject(Object)
+    if not Object then
+        return true
+    end
 
-            if IsBushInCurrentRooms(Object) then
-                return true
-            end
+    if Object:IsA("Tool") then
+        local Parent = Object.Parent
 
-            if IsInsideParts(Object) then
-                return true
-            end
-
-            return false
+        if Parent and Parent:IsA("Backpack") then
+            return true
         end
+    end
 
-        local function IsEntity(Object)
+    if IsBushInCurrentRooms(Object) then
+        return true
+    end
+
+    if IsInsideParts(Object) then
+        return true
+    end
+
+    return false
+end
+
+    local function IsEntity(Object)
             if not Object then
                 return false
             end
@@ -2659,8 +2804,9 @@ end
             Text.TextColor3 = Color
             Text.TextStrokeTransparency = 0
             Text.TextScaled = true
-            Text.Font = Enum.Font.GothamBold
+            Text.Font = Enum.Font.Michroma
             Text.Parent = Billboard
+            Text.TextSize = 12
 
             local Line
 
@@ -3300,6 +3446,14 @@ end
             warn("DoorsHack: Failed to find the Gold IntValue.")
         end
 
+        TrollGroup:AddButton({
+            Text = "Launch Doors Hardcore Mode",
+
+            Func = function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/thelostw3r/Mods/main/HardcoreMode.lua"))()
+            end
+        })
+
         ----------------------------------------------------------------
         -- MENU
         ----------------------------------------------------------------
@@ -3394,11 +3548,6 @@ end
                         end
                     end,
                 }
-            )
-
-            MainGroup:AddLabel(
-                "Bypass available only to "
-                    .. BYPASS_USERNAME
             )
         end
 
@@ -3773,7 +3922,7 @@ KeyGroup:AddButton({
     Func = function()
         local Copied =
             CopyText(
-                "https://lootdest.org/s?rFzGWhmJ"
+                "https://doorschackkey.bonto.run/"
             )
 
         if Copied then
@@ -3784,7 +3933,7 @@ KeyGroup:AddButton({
         else
             AuthNotify(
                 "DoorsHack",
-                "https://lootdest.org/s?rFzGWhmJ"
+                "https://doorschackkey.bonto.run/"
             )
         end
     end
@@ -3795,5 +3944,5 @@ KeyGroup:AddLabel(
 )
 
 KeyGroup:AddLabel(
-    "https://lootdest.org/s?rFzGWhmJ"
+    "https://doorschackkey.bonto.run/"
 )
