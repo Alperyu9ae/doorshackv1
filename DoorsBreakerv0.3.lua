@@ -222,7 +222,7 @@ end
 local AuthLibrary, AuthLibraryError = LoadObsidian()
 
 if not AuthLibrary then
-    error("DoorsHack: " .. tostring(AuthLibraryError))
+    error("DoorsBreaker: " .. tostring(AuthLibraryError))
 end
 
 if workspace:FindFirstChild("Lobby") then
@@ -389,7 +389,7 @@ local function VerifyKey(Key)
 
         KeyExpiresAt = ExpiresAt
 
-        _G.DoorsHackKeyExpiresAt = ExpiresAt
+        _G.DoorsBreakerKeyExpiresAt = ExpiresAt
 
         return true, "Key is valid!", ExpiresAt
     end
@@ -448,7 +448,7 @@ local function CreateMainLibrary()
     local Library, ErrorMessage = LoadObsidian()
 
     if not Library then
-        warn("DoorsHack: " .. tostring(ErrorMessage))
+        warn("DoorsBreaker: " .. tostring(ErrorMessage))
         return nil
     end
 
@@ -507,7 +507,7 @@ local function LoadMainUI(Library, SaveManager, ThemeManager)
         end
 
         local Loading = Library:CreateLoading({
-            Title = "DoorsHack",
+            Title = "DoorsBreaker",
             Icon = 11358524205,
             TotalSteps = 4
         })
@@ -575,7 +575,7 @@ local function LoadMainUI(Library, SaveManager, ThemeManager)
         task.wait(0.5)
 
 local Window = Library:CreateWindow({
-    Title = "DoorsHack",
+    Title = "DoorsBreaker",
     Footer =
         "version: v0.3 | Executor: "
         .. tostring(ExecutorName)
@@ -634,7 +634,7 @@ local Window = Library:CreateWindow({
             end
 
             MusicSound = Instance.new("Sound")
-            MusicSound.Name = "DoorsHackMusic"
+            MusicSound.Name = "DoorsBreakerMusic"
             MusicSound.SoundId = "rbxassetid://127304317285227"
             MusicSound.Volume = 1
             MusicSound.Looped = true
@@ -723,7 +723,7 @@ local Window = Library:CreateWindow({
             Image = UserThumbnail,
         })
 
-        Groupbox9:AddLabel("Welcome to DoorsHack, " .. tostring(Player and Player.Name or "Unknown"))
+        Groupbox9:AddLabel("Welcome to DoorsBreaker, " .. tostring(Player and Player.Name or "Unknown"))
 
         ----------------------------------------------------------------
         -- KEY TAB
@@ -769,11 +769,11 @@ local Window = Library:CreateWindow({
 
         local KeyExpired = false
         local KeyBypassed =
-            _G.DoorsHackKeyBypassed == true
+            _G.DoorsBreakerKeyBypassed == true
 
         if not KeyBypassed then
             KeyExpiresAt =
-                tonumber(_G.DoorsHackKeyExpiresAt)
+                tonumber(_G.DoorsBreakerKeyExpiresAt)
                 or KeyExpiresAt
         end
 
@@ -846,14 +846,14 @@ local Window = Library:CreateWindow({
                 KeyExpired = true
                 KeyExpiresAt = GetServerNow()
 
-                _G.DoorsHackKeyExpiresAt = KeyExpiresAt
-                _G.DoorsHackKey = nil
+                _G.DoorsBreakerKeyExpiresAt = KeyExpiresAt
+                _G.DoorsBreakerKey = nil
 
                 UpdateKeyExpireLabel()
 
                 pcall(function()
                     AuthNotify(
-                        "DoorsHack",
+                        "DoorsBreaker",
                         "Key expired locally."
                     )
                 end)
@@ -1034,7 +1034,7 @@ local function StartFreecam()
         )
 
     RunService:BindToRenderStep(
-        "DoorsHackFreecam",
+        "DoorsBreakerFreecam",
         Enum.RenderPriority.Camera.Value + 1,
         function(DeltaTime)
             if not FreecamEnabled then
@@ -1163,7 +1163,7 @@ local function StopFreecam()
 
     pcall(function()
         RunService:UnbindFromRenderStep(
-            "DoorsHackFreecam"
+            "DoorsBreakerFreecam"
         )
     end)
 
@@ -1846,7 +1846,7 @@ end)
         end
 
         RunService:BindToRenderStep(
-            "DoorsHackGlobalFOV",
+            "DoorsBreakerGlobalFOV",
             Enum.RenderPriority.Camera.Value + 1,
             function()
                 ApplyFOV()
@@ -2751,7 +2751,7 @@ end
                 Instance.new("Highlight")
 
             Highlight.Name =
-                "DoorsHackESP"
+                "DoorsBreakerESP"
 
             Highlight.Adornee = Object
             Highlight.FillColor = Color
@@ -2767,7 +2767,7 @@ end
                 Instance.new("BillboardGui")
 
             Billboard.Name =
-                "DoorsHackESPLabel"
+                "DoorsBreakerESPLabel"
 
             Billboard.Size =
                 UDim2.new(
@@ -3388,7 +3388,7 @@ end
                 end
             })
         else
-            warn("DoorsHack: Failed to find the Revive RemoteEvent.")
+            warn("DoorsBreaker: Failed to find the Revive RemoteEvent.")
         end
 
         local LobbyRemotesFolder =
@@ -3407,7 +3407,7 @@ end
                 end
             })
         else
-            warn("DoorsHack: Failed to find the Lobby RemoteEvent.")
+            warn("DoorsBreaker: Failed to find the Lobby RemoteEvent.")
         end
 
         local PlayAgainRemotesFolder =
@@ -3426,7 +3426,7 @@ end
                 end
             })
         else
-            warn("DoorsHack: Failed to find the PlayAgain RemoteEvent.")
+            warn("DoorsBreaker: Failed to find the PlayAgain RemoteEvent.")
         end
 
         local Gold =
@@ -3443,7 +3443,7 @@ end
                 end
             })
         else
-            warn("DoorsHack: Failed to find the Gold IntValue.")
+            warn("DoorsBreaker: Failed to find the Gold IntValue.")
         end
 
         TrollGroup:AddButton({
@@ -3531,18 +3531,18 @@ end
                         if WriteSuccess then
                             if Value then
                                 Notify(
-                                    "DoorsHack",
+                                    "DoorsBreaker",
                                     "Key bypass enabled."
                                 )
                             else
                                 Notify(
-                                    "DoorsHack",
+                                    "DoorsBreaker",
                                     "Key bypass disabled."
                                 )
                             end
                         else
                             Notify(
-                                "DoorsHack",
+                                "DoorsBreaker",
                                 "Your executor does not support writefile."
                             )
                         end
@@ -3574,11 +3574,11 @@ end
             )
 
             ThemeManager:SetFolder(
-                "DoorsHack"
+                "DoorsBreaker"
             )
 
             SaveManager:SetFolder(
-                "DoorsHack"
+                "DoorsBreaker"
             )
 
             SaveManager:SetSubFolder(
@@ -3672,7 +3672,7 @@ end
 
                 pcall(function()
                     RunService:UnbindFromRenderStep(
-                        "DoorsHackGlobalFOV"
+                        "DoorsBreakerGlobalFOV"
                     )
                 end)
 
@@ -3703,7 +3703,7 @@ end
         )
 
         Notify(
-            "DoorsHack",
+            "DoorsBreaker",
             "Everything loaded successfully!"
         )
     end)
@@ -3711,7 +3711,7 @@ end
     if not Success then
         pcall(function()
             Library:Notify({
-                Title = "DoorsHack",
+                Title = "DoorsBreaker",
                 Description =
                     "Failed to load: "
                     .. tostring(ErrorMessage),
@@ -3737,7 +3737,7 @@ local function StartMain()
 
     if not MainLibrary then
         warn(
-            "DoorsHack: Failed to initialize main library."
+            "DoorsBreaker: Failed to initialize main library."
         )
 
         return
@@ -3759,7 +3759,7 @@ local function StartMain()
         or not ThemeManager then
 
         warn(
-            "DoorsHack: Failed to load Obsidian addons."
+            "DoorsBreaker: Failed to load Obsidian addons."
         )
 
         return
@@ -3779,8 +3779,8 @@ end
 if Player.Name == BYPASS_USERNAME
     and ReadBypassFile() then
 
-    _G.DoorsHackKeyBypassed = true
-    _G.DoorsHackKeyExpiresAt = nil
+    _G.DoorsBreakerKeyBypassed = true
+    _G.DoorsBreakerKeyExpiresAt = nil
     KeyExpiresAt = 0
 
     StartMain()
@@ -3793,7 +3793,7 @@ end
 
 local KeyWindow =
     AuthLibrary:CreateWindow({
-        Title = "DoorsHack",
+        Title = "DoorsBreaker",
         Footer = "version: 0.1",
         Resizable = false,
         Center = true,
@@ -3814,7 +3814,7 @@ local KeyGroup =
     )
 
 KeyGroup:AddLabel(
-    "Enter your DoorsHack key."
+    "Enter your DoorsBreaker key."
 )
 
 KeyGroup:AddLabel(
@@ -3847,12 +3847,12 @@ KeyGroup:AddButton({
 
         if Copied then
             AuthNotify(
-                "DoorsHack",
+                "DoorsBreaker",
                 "Key website copied to clipboard!"
             )
         else
             AuthNotify(
-                "DoorsHack",
+                "DoorsBreaker",
                 KEY_GET_URL
             )
         end
@@ -3870,7 +3870,7 @@ KeyGroup:AddButton({
 
         if CleanKey == "" then
             AuthNotify(
-                "DoorsHack",
+                "DoorsBreaker",
                 "Enter a key first."
             )
 
@@ -3878,7 +3878,7 @@ KeyGroup:AddButton({
         end
 
         AuthNotify(
-            "DoorsHack",
+            "DoorsBreaker",
             "Checking key..."
         )
 
@@ -3890,22 +3890,22 @@ KeyGroup:AddButton({
 
             if not Valid then
                 AuthNotify(
-                    "DoorsHack",
+                    "DoorsBreaker",
                     Message
                 )
 
                 return
             end
 
-            _G.DoorsHackKeyBypassed = false
-            _G.DoorsHackKey =
+            _G.DoorsBreakerKeyBypassed = false
+            _G.DoorsBreakerKey =
                 CleanKey
 
-            _G.DoorsHackKeyExpiresAt =
+            _G.DoorsBreakerKeyExpiresAt =
                 tonumber(Expires)
 
             AuthNotify(
-                "DoorsHack",
+                "DoorsBreaker",
                 "Key verified successfully!"
             )
 
@@ -3922,18 +3922,18 @@ KeyGroup:AddButton({
     Func = function()
         local Copied =
             CopyText(
-                "https://doorschackkey.bonto.run/"
+                "https://lootdest.org/s?rFzGWhmJ"
             )
 
         if Copied then
             AuthNotify(
-                "DoorsHack",
+                "DoorsBreaker",
                 "Website copied!"
             )
         else
             AuthNotify(
-                "DoorsHack",
-                "https://doorschackkey.bonto.run/"
+                "DoorsBreaker",
+                "https://lootdest.org/s?rFzGWhmJ"
             )
         end
     end
@@ -3944,5 +3944,5 @@ KeyGroup:AddLabel(
 )
 
 KeyGroup:AddLabel(
-    "https://doorschackkey.bonto.run/"
+    "https://lootdest.org/s?rFzGWhmJ"
 )
